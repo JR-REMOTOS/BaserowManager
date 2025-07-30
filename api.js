@@ -15,6 +15,8 @@ class BaserowAPI {
             apiUrl: config.apiUrl,
             conteudosTableId: config.conteudosTableId,
             categoriasTableId: config.categoriasTableId,
+            episodiosTableId: config.episodiosTableId,
+            usuariosTableId: config.usuariosTableId,
             bannersTableId: config.bannersTableId
         };
         this.token = config.token;
@@ -224,6 +226,8 @@ class BaserowAPI {
         const tableIds = {
             Conteúdos: this.config.conteudosTableId,
             Categorias: this.config.categoriasTableId,
+            Episódios: this.config.episodiosTableId,
+            Usuários: this.config.usuariosTableId,
             Banners: this.config.bannersTableId
         };
 
