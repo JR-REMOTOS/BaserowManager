@@ -20,12 +20,20 @@ class M3UManager {
         this.isLoading = false;
         this.xtreamAPI = new XtreamAPI();
         this.fieldMapper = new M3UFieldMapper();
+        this.worker = new Worker('m3u-worker.js');
         this.connectionStatus = 'disconnected';
         this.lastError = null;
         this.retryCount = 0;
         this.maxRetries = 3;
         this.batchSize = 100; // Tamanho do lote para processamento e renderização
         this.renderedCounts = { movies: 0, series: 0, channels: 0 }; // Contador de itens renderizados por categoria
+
+        this.worker.onmessage = (event) => {
+            console.log('[M3U] Dados processados recebidos do worker.');
+            this.processedContent = event.data;
+            this.renderContent(true); // Re-renderizar com dados completos
+        };
+
         this.init();
     }
 
@@ -645,74 +653,43 @@ class M3UManager {
         }
     }
 
-    async processContent() {
-        this.processedContent = {
-            movies: [],
-            series: {},
-            channels: []
-        };
-        this.renderedCounts = { movies: 0, series: 0, channels: 0 };
+    async processContent(isInitial = true) {
+        if (isInitial) {
+            // Renderização inicial rápida com dados não processados
+            this.renderInitialContent();
+            // Enviar para o worker processar em segundo plano
+            this.worker.postMessage(this.currentPlaylist);
+        } else {
+            // Re-renderização com dados processados do worker
+            this.renderContent(true);
+        }
+    }
 
-        console.log('[M3U] Iniciando processamento de', this.currentPlaylist.length, 'itens');
-        
-        for (let i = 0; i < this.currentPlaylist.length; i += this.batchSize) {
-            const batch = this.currentPlaylist.slice(i, i + this.batchSize);
-            for (const item of batch) {
-                const category = this.categorizeItem(item);
-                console.log('[M3U] Item categorizado:', item.name, category);
-                
-                switch (category.type) {
-                    case 'movie':
-                        this.processedContent.movies.push({
-                            ...item,
-                            category: category.category || item.group || 'Filmes'
-                        });
-                        break;
-                        
-                    case 'series':
-                        if (!this.processedContent.series[category.seriesName]) {
-                            this.processedContent.series[category.seriesName] = {
-                                name: category.seriesName,
-                                logo: item.logo,
-                                episodes: [],
-                                group: item.group || 'Séries'
-                            };
-                        }
-                        this.processedContent.series[category.seriesName].episodes.push({
-                            ...item,
-                            season: category.season,
-                            episode: category.episode,
-                            episodeName: category.episodeName,
-                            seriesName: category.seriesName
-                        });
-                        break;
-                        
-                    case 'channel':
-                        this.processedContent.channels.push({
-                            ...item,
-                            category: item.group || 'Canais'
-                        });
-                        break;
-                }
-            }
-            await new Promise(resolve => setTimeout(resolve, 10)); // Pequena pausa para liberar memória
+    renderInitialContent() {
+        let container = document.getElementById('m3uContent');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'm3uContent';
+            document.querySelector('.main-content').appendChild(container);
         }
 
-        // Ordenar episódios por temporada e episódio
-        Object.values(this.processedContent.series).forEach(series => {
-            series.episodes.sort((a, b) => {
-                if ((a.season || 0) !== (b.season || 0)) {
-                    return (a.season || 0) - (b.season || 0);
-                }
-                return (a.episode || 0) - (b.episode || 0);
-            });
-        });
+        const initialItems = this.currentPlaylist.slice(0, this.batchSize);
+        this.renderedCounts.movies = initialItems.length; // Usar 'movies' como contador geral inicial
 
-        // Validar categorização
-        this.validateCategorization();
-
-        const stats = this.getTotalItemsStats();
-        console.log('[M3U] Resultado do processamento:', stats);
+        const html = `
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-spinner fa-spin me-2"></i>
+                    Processando lista completa em segundo plano. A interface será atualizada em breve.
+                </div>
+                <div class="row">
+                    ${initialItems.map(item => this.renderItem(item, 'movie')).join('')}
+                </div>
+                <button class="btn btn-outline-primary w-100 mt-3" id="loadMoreMovies" disabled>Carregando...</button>
+            </div>
+        `;
+        container.innerHTML = html;
+        container.style.display = 'block';
     }
 
     validateCategorization() {
