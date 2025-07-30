@@ -252,6 +252,8 @@ class BaserowAPI {
         const tables = [
             { id: this.config.conteudosTableId, name: 'Conteúdos' },
             { id: this.config.categoriasTableId, name: 'Categorias' },
+            { id: this.config.episodiosTableId, name: 'Episódios' },
+            { id: this.config.usuariosTableId, name: 'Usuários' },
             { id: this.config.bannersTableId, name: 'Banners' }
         ];
 
