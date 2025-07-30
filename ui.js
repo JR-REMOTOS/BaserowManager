@@ -169,38 +169,12 @@ class UIManager {
     }
 
 
-    // Atualizar informações na configuração
-    updateConfigInfo() {
-        const config = this.api.getCurrentConfig();
-        const infoDiv = document.querySelector('.config-info');
-        
-        if (infoDiv) {
-            const tablesList = config.config ? Object.keys(config.config.tables).join(', ') : 'Nenhuma';
-            
-            infoDiv.innerHTML = `
-                <h6><i class="fas fa-info-circle me-2"></i>Informações do Site Atual:</h6>
-                <ul class="mb-2">
-                    <li><strong>Site:</strong> ${config.config?.name || 'Não configurado'}</li>
-                    <li><strong>URL da API:</strong> ${config.config?.apiUrl || 'Não configurado'}</li>
-                    <li><strong>Database ID:</strong> ${config.config?.databaseId || 'Não configurado'}</li>
-                    <li><strong>Tabelas:</strong> ${tablesList}</li>
-                    <li><strong>M3U Manager:</strong> ${this.isM3UActive ? '✅ Ativo' : '⭕ Inativo'}</li>
-                </ul>
-            `;
-        }
-    }
-
     // Mostrar/ocultar configuração
     toggleConfig() {
         const panel = document.getElementById('configPanel');
         if (panel) {
             const isVisible = panel.style.display !== 'none';
             panel.style.display = isVisible ? 'none' : 'block';
-            
-            if (!isVisible) {
-                this.updateConfigInfo();
-                this.fillConfigForm();
-            }
         }
     }
 
