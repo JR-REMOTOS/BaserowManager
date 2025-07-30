@@ -104,14 +104,37 @@ class M3UManager {
                 this.toggleSelectAll();
             } else if (e.target.id === 'addSelectedItems') {
                 this.addSelectedItems();
-            } else if (e.target.id === 'loadMoreMovies') {
+            }
+        });
+
+        // Adicionar listeners para botões "Carregar Mais" de forma delegada
+        document.addEventListener('click', (e) => {
+            if (e.target.matches('#loadMoreMovies')) {
                 this.loadMoreItems('movies');
-            } else if (e.target.id === 'loadMoreSeries') {
+            } else if (e.target.matches('#loadMoreSeries')) {
                 this.loadMoreItems('series');
-            } else if (e.target.id === 'loadMoreChannels') {
+            } else if (e.target.matches('#loadMoreChannels')) {
                 this.loadMoreItems('channels');
             }
         });
+
+        // Rolagem infinita
+        const mainContent = document.querySelector('.main-content');
+        if (mainContent) {
+            mainContent.addEventListener('scroll', () => {
+                if (this.isLoading) return;
+
+                const activeTab = document.querySelector('.tab-pane.active');
+                if (!activeTab) return;
+
+                const category = activeTab.id;
+                const loadMoreButton = document.getElementById(`loadMore${category.charAt(0).toUpperCase() + category.slice(1)}`);
+
+                if (loadMoreButton && mainContent.scrollTop + mainContent.clientHeight >= mainContent.scrollHeight - 200) {
+                    this.loadMoreItems(category);
+                }
+            });
+        }
 
         document.addEventListener('change', (e) => {
             if (e.target.classList.contains('item-checkbox')) {
@@ -960,11 +983,13 @@ class M3UManager {
             return '<div class="text-center py-4 text-muted">Nenhum filme encontrado</div>';
         }
 
-        const groupedMovies = this.groupBy(this.processedContent.movies.slice(0, this.batchSize), 'category');
-        this.renderedCounts.movies = Math.min(this.batchSize, this.processedContent.movies.length);
+        const moviesToRender = this.processedContent.movies.slice(0, this.batchSize);
+        this.renderedCounts.movies = moviesToRender.length;
+
+        const groupedMovies = this.groupBy(moviesToRender, 'category');
         
-        return Object.entries(groupedMovies).map(([category, movies]) => `
-            <div class="category-section mb-4">
+        let html = Object.entries(groupedMovies).map(([category, movies]) => `
+            <div class="category-section mb-4" data-category-group="movies">
                 <div class="category-header d-flex justify-content-between align-items-center mb-3">
                     <h6 class="mb-0">
                         <i class="fas fa-folder me-2"></i>${category}
@@ -979,6 +1004,12 @@ class M3UManager {
                 </div>
             </div>
         `).join('');
+
+        if (this.processedContent.movies.length > this.renderedCounts.movies) {
+            html += `<button class="btn btn-outline-primary w-100 mt-3" id="loadMoreMovies" onclick="app.m3uManager.loadMoreItems('movies')">Carregar Mais Filmes</button>`;
+        }
+
+        return html;
     }
 
     renderSeries() {
@@ -986,13 +1017,14 @@ class M3UManager {
             return '<div class="text-center py-4 text-muted">Nenhuma série encontrada</div>';
         }
 
-        const seriesKeys = Object.keys(this.processedContent.series).slice(0, this.batchSize);
-        this.renderedCounts.series = Math.min(this.batchSize, seriesKeys.length);
+        const seriesKeys = Object.keys(this.processedContent.series);
+        const seriesToRender = seriesKeys.slice(0, this.batchSize);
+        this.renderedCounts.series = seriesToRender.length;
         
-        return seriesKeys.map(seriesName => {
+        let html = seriesToRender.map(seriesName => {
             const series = this.processedContent.series[seriesName];
             return `
-                <div class="series-section mb-4">
+                <div class="series-section mb-4" data-category-group="series">
                     <div class="series-header d-flex justify-content-between align-items-center mb-3 p-3 bg-light rounded">
                         <div class="series-info d-flex align-items-center">
                             ${series.logo ? `<img src="${series.logo}" alt="${seriesName}" class="series-logo me-3" style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px;" onerror="this.style.display='none'">` : ''}
@@ -1018,6 +1050,12 @@ class M3UManager {
                 </div>
             `;
         }).join('');
+
+        if (seriesKeys.length > this.renderedCounts.series) {
+            html += `<button class="btn btn-outline-primary w-100 mt-3" id="loadMoreSeries" onclick="app.m3uManager.loadMoreItems('series')">Carregar Mais Séries</button>`;
+        }
+
+        return html;
     }
 
     renderChannels() {
@@ -1025,11 +1063,13 @@ class M3UManager {
             return '<div class="text-center py-4 text-muted">Nenhum canal encontrado</div>';
         }
 
-        const groupedChannels = this.groupBy(this.processedContent.channels.slice(0, this.batchSize), 'category');
-        this.renderedCounts.channels = Math.min(this.batchSize, this.processedContent.channels.length);
+        const channelsToRender = this.processedContent.channels.slice(0, this.batchSize);
+        this.renderedCounts.channels = channelsToRender.length;
+
+        const groupedChannels = this.groupBy(channelsToRender, 'category');
         
-        return Object.entries(groupedChannels).map(([category, channels]) => `
-            <div class="category-section mb-4">
+        let html = Object.entries(groupedChannels).map(([category, channels]) => `
+            <div class="category-section mb-4" data-category-group="channels">
                 <div class="category-header d-flex justify-content-between align-items-center mb-3">
                     <h6 class="mb-0">
                         <i class="fas fa-broadcast-tower me-2"></i>${category}
@@ -1044,6 +1084,12 @@ class M3UManager {
                 </div>
             </div>
         `).join('');
+
+        if (this.processedContent.channels.length > this.renderedCounts.channels) {
+            html += `<button class="btn btn-outline-primary w-100 mt-3" id="loadMoreChannels" onclick="app.m3uManager.loadMoreItems('channels')">Carregar Mais Canais</button>`;
+        }
+
+        return html;
     }
 
     renderItem(item, type) {
@@ -1089,101 +1135,89 @@ class M3UManager {
     }
 
     async loadMoreItems(category) {
-        const tabContent = document.getElementById(category);
-        if (!tabContent) return;
+        const loadMoreButton = document.getElementById(`loadMore${category.charAt(0).toUpperCase() + category.slice(1)}`);
+        if (!loadMoreButton) return;
 
-        let itemsToRender = [];
+        loadMoreButton.disabled = true;
+        loadMoreButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Carregando...';
+
+        const currentCount = this.renderedCounts[category];
+        const newCount = currentCount + this.batchSize;
+
+        let items;
+        let container;
         let html = '';
 
         switch (category) {
             case 'movies':
-                this.renderedCounts.movies += this.batchSize;
-                itemsToRender = this.processedContent.movies.slice(this.renderedCounts.movies - this.batchSize, this.renderedCounts.movies);
-                const groupedMovies = this.groupBy(itemsToRender, 'category');
-                html = Object.entries(groupedMovies).map(([cat, movies]) => `
-                    <div class="category-section mb-4">
-                        <div class="category-header d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="mb-0">
-                                <i class="fas fa-folder me-2"></i>${cat}
-                                <span class="badge bg-secondary ms-2">${movies.length}</span>
-                            </h6>
-                            <button class="btn btn-outline-success btn-sm add-all-items" data-category="movies-${cat}" data-bs-toggle="tooltip" title="Adicionar todos os filmes desta categoria ao Baserow">
-                                <i class="fas fa-plus"></i> Adicionar Todos
-                            </button>
-                        </div>
-                        <div class="row">
-                            ${movies.map(movie => this.renderItem(movie, 'movie')).join('')}
-                        </div>
-                    </div>
-                `).join('');
+                items = this.processedContent.movies.slice(currentCount, newCount);
+                container = document.querySelector('#movies .row');
+                html = items.map(movie => this.renderItem(movie, 'movie')).join('');
                 break;
             case 'series':
-                this.renderedCounts.series += this.batchSize;
-                const seriesKeys = Object.keys(this.processedContent.series).slice(this.renderedCounts.series - this.batchSize, this.renderedCounts.series);
-                html = seriesKeys.map(seriesName => {
-                    const series = this.processedContent.series[seriesName];
-                    return `
-                        <div class="series-section mb-4">
-                            <div class="series-header d-flex justify-content-between align-items-center mb-3 p-3 bg-light rounded">
-                                <div class="series-info d-flex align-items-center">
-                                    ${series.logo ? `<img src="${series.logo}" alt="${seriesName}" class="series-logo me-3" style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px;" onerror="this.style.display='none'">` : ''}
-                                    <div>
-                                        <h6 class="mb-0">${seriesName}</h6>
-                                        <small class="text-muted">${series.episodes.length} episódios</small>
-                                    </div>
-                                </div>
-                                <div class="series-actions">
-                                    <button class="btn btn-outline-success btn-sm add-all-items me-2" data-category="series-${seriesName}" data-bs-toggle="tooltip" title="Adicionar todos os episódios desta série ao Baserow">
-                                        <i class="fas fa-plus"></i> Adicionar Série
-                                    </button>
-                                    <button class="btn btn-outline-primary btn-sm series-toggle" data-series-name="${seriesName}" data-bs-toggle="tooltip" title="Mostrar/esconder episódios">
-                                        <i class="fas fa-chevron-down"></i> Episódios
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="series-episodes collapse" id="episodes-${this.sanitizeId(seriesName)}">
-                                <div class="row">
-                                    ${series.episodes.slice(0, this.batchSize).map(episode => this.renderItem(episode, 'episode')).join('')}
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
+                const seriesKeys = Object.keys(this.processedContent.series);
+                items = seriesKeys.slice(currentCount, newCount);
+                container = document.querySelector('#series');
+                html = items.map(seriesName => this.renderSeriesItem(seriesName)).join('');
                 break;
             case 'channels':
-                this.renderedCounts.channels += this.batchSize;
-                itemsToRender = this.processedContent.channels.slice(this.renderedCounts.channels - this.batchSize, this.renderedCounts.channels);
-                const groupedChannels = this.groupBy(itemsToRender, 'category');
-                html = Object.entries(groupedChannels).map(([cat, channels]) => `
-                    <div class="category-section mb-4">
-                        <div class="category-header d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="mb-0">
-                                <i class="fas fa-broadcast-tower me-2"></i>${cat}
-                                <span class="badge bg-secondary ms-2">${channels.length}</span>
-                            </h6>
-                            <button class="btn btn-outline-success btn-sm add-all-items" data-category="channels-${cat}" data-bs-toggle="tooltip" title="Adicionar todos os canais desta categoria ao Baserow">
-                                <i class="fas fa-plus"></i> Adicionar Todos
-                            </button>
-                        </div>
-                        <div class="row">
-                            ${channels.map(channel => this.renderItem(channel, 'channel')).join('')}
-                        </div>
-                    </div>
-                `).join('');
+                items = this.processedContent.channels.slice(currentCount, newCount);
+                container = document.querySelector('#channels .row');
+                html = items.map(channel => this.renderItem(channel, 'channel')).join('');
                 break;
         }
 
-        const loadMoreButton = tabContent.querySelector(`#loadMore${category.charAt(0).toUpperCase() + category.slice(1)}`);
-        if (loadMoreButton) {
-            loadMoreButton.insertAdjacentHTML('beforebegin', html);
-            if (this.renderedCounts[category] >= (category === 'series' ? Object.keys(this.processedContent.series).length : this.processedContent[category].length)) {
-                loadMoreButton.remove();
+        if (container && html) {
+            // Usar um elemento temporário para inserir o HTML e evitar problemas de script
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = html;
+            while(tempDiv.firstChild) {
+                container.appendChild(tempDiv.firstChild);
             }
         }
 
+        this.renderedCounts[category] = newCount;
+
+        if (newCount >= (category === 'series' ? Object.keys(this.processedContent.series).length : this.processedContent[category].length)) {
+            loadMoreButton.remove();
+        } else {
+            loadMoreButton.disabled = false;
+            loadMoreButton.innerHTML = `Carregar Mais ${category.charAt(0).toUpperCase() + category.slice(1)}`;
+        }
+
         // Re-inicializar tooltips para novos elementos
-        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        const tooltipTriggerList = [].slice.call(container.querySelectorAll('[data-bs-toggle="tooltip"]'));
         tooltipTriggerList.forEach(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+    }
+
+    renderSeriesItem(seriesName) {
+        const series = this.processedContent.series[seriesName];
+        return `
+            <div class="series-section mb-4" data-category-group="series">
+                <div class="series-header d-flex justify-content-between align-items-center mb-3 p-3 bg-light rounded">
+                    <div class="series-info d-flex align-items-center">
+                        ${series.logo ? `<img src="${series.logo}" alt="${seriesName}" class="series-logo me-3" style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px;" onerror="this.style.display='none'">` : ''}
+                        <div>
+                            <h6 class="mb-0">${seriesName}</h6>
+                            <small class="text-muted">${series.episodes.length} episódios</small>
+                        </div>
+                    </div>
+                    <div class="series-actions">
+                        <button class="btn btn-outline-success btn-sm add-all-items me-2" data-category="series-${seriesName}" data-bs-toggle="tooltip" title="Adicionar todos os episódios desta série ao Baserow">
+                            <i class="fas fa-plus"></i> Adicionar Série
+                        </button>
+                        <button class="btn btn-outline-primary btn-sm series-toggle" data-series-name="${seriesName}" data-bs-toggle="tooltip" title="Mostrar/esconder episódios">
+                            <i class="fas fa-chevron-down"></i> Episódios
+                        </button>
+                    </div>
+                </div>
+                <div class="series-episodes collapse" id="episodes-${this.sanitizeId(seriesName)}">
+                    <div class="row">
+                        ${series.episodes.slice(0, this.batchSize).map(episode => this.renderItem(episode, 'episode')).join('')}
+                    </div>
+                </div>
+            </div>
+        `;
     }
 
     async addSingleItem(itemId) {
