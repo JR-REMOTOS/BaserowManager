@@ -316,6 +316,11 @@ class M3UManager {
             this.updateConnectionStatus('connected', `${stats.total} itens carregados`);
             this.showAlert(`🎉 Lista Xtream carregada com sucesso!\n\n📊 ${stats.total} itens encontrados:\n🎬 ${stats.movies} filmes\n📺 ${stats.series} séries\n📡 ${stats.channels} canais`, 'success');
             
+            // Salvar configurações do usuário
+            if (this.baserowManager && typeof this.baserowManager.saveUserConfig === 'function') {
+                await this.baserowManager.saveUserConfig();
+            }
+
         } catch (error) {
             console.error('[M3U] Erro ao carregar Xtream:', error);
             this.lastError = error;

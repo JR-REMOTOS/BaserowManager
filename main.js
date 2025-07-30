@@ -47,6 +47,9 @@ class BaserowManager {
             // Configurar navegação entre views
             this.setupViewNavigation();
             
+            // Carregar configurações do usuário
+            await this.loadUserConfig();
+
             this.isInitialized = true;
             console.log('[App] Aplicação inicializada com sucesso');
             
@@ -700,6 +703,69 @@ class BaserowManager {
      */
     searchRecords() {
         this.ui.searchRecords();
+    }
+
+    /**
+     * Carregar configurações do usuário
+     */
+    async loadUserConfig() {
+        try {
+            const response = await fetch('load_config.php');
+            const result = await response.json();
+
+            if (result.success && result.data) {
+                const config = result.data;
+                // Preencher campos do Baserow
+                if (config.baserow_api_url) document.getElementById('apiUrl').value = config.baserow_api_url;
+                if (config.baserow_api_token) document.getElementById('apiToken').value = config.baserow_api_token;
+                if (config.baserow_database_id) document.getElementById('databaseId').value = config.baserow_database_id;
+
+                // Preencher campos do M3U
+                if (config.m3u_url) document.getElementById('xtreamBaseUrl').value = config.m3u_url;
+                if (config.m3u_username) document.getElementById('xtreamUsername').value = config.m3u_username;
+                if (config.m3u_password) document.getElementById('xtreamPassword').value = config.m3u_password;
+
+                this.ui.showAlert('Configurações do usuário carregadas.', 'info');
+            }
+        } catch (error) {
+            console.error('[App] Erro ao carregar configurações do usuário:', error);
+            this.ui.showAlert('Não foi possível carregar as configurações do usuário.', 'warning');
+        }
+    }
+
+    /**
+     * Salvar configurações do usuário
+     */
+    async saveUserConfig() {
+        try {
+            const data = {
+                baserow_api_url: document.getElementById('apiUrl').value,
+                baserow_api_token: document.getElementById('apiToken').value,
+                baserow_database_id: document.getElementById('databaseId').value,
+                m3u_url: document.getElementById('xtreamBaseUrl').value,
+                m3u_username: document.getElementById('xtreamUsername').value,
+                m3u_password: document.getElementById('xtreamPassword').value
+            };
+
+            const response = await fetch('save_config.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                this.ui.showAlert('Configurações salvas no servidor.', 'success');
+            } else {
+                this.ui.showAlert('Erro ao salvar configurações no servidor.', 'danger');
+            }
+        } catch (error) {
+            console.error('[App] Erro ao salvar configurações do usuário:', error);
+            this.ui.showAlert('Erro ao salvar configurações do usuário.', 'danger');
+        }
     }
 
     // Aliases para métodos da UI (para compatibilidade)

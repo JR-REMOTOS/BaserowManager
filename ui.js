@@ -782,64 +782,17 @@ class UIManager {
 
     // Salvar configuração
     async saveConfig() {
-        const token = localStorage.getItem('authToken');
-        if (!token) return;
-
-        const baserowConfig = {
-            apiUrl: document.getElementById('apiUrl')?.value?.trim(),
-            apiToken: document.getElementById('apiToken')?.value?.trim(),
-            databaseId: document.getElementById('databaseId')?.value?.trim()
-        };
-
-        const m3uConfig = {
-            xtreamBaseUrl: document.getElementById('xtreamBaseUrl')?.value?.trim(),
-            xtreamUsername: document.getElementById('xtreamUsername')?.value?.trim(),
-            xtreamPassword: document.getElementById('xtreamPassword')?.value?.trim()
-        };
-
-        try {
-            await APIUtils.fetchWithAuth('http://localhost:3000/api/config', {
-                method: 'POST',
-                body: JSON.stringify({ baserow: baserowConfig, m3u: m3uConfig })
-            });
-            this.showAlert('Configuração salva no servidor com sucesso!', 'success');
-        } catch (error) {
-            console.error('Erro ao salvar configuração no servidor:', error);
-            this.showAlert('Não foi possível salvar a configuração no servidor.', 'danger');
+        if (window.app && typeof window.app.saveUserConfig === 'function') {
+            await window.app.saveUserConfig();
+        } else {
+            console.error("saveUserConfig function not found on global app object.");
         }
     }
 
-    // Carregar configuração salva
+    // Carregar configuração salva (agora tratado pelo main.js)
     async loadSavedConfig() {
-        const token = localStorage.getItem('authToken');
-        if (!token) return;
-
-        try {
-            const response = await APIUtils.fetchWithAuth('http://localhost:3000/api/config');
-
-            if (response.ok) {
-                const config = await response.json();
-                
-                // Preencher campos do Baserow
-                if (config.baserow) {
-                    document.getElementById('apiUrl').value = config.baserow.apiUrl || '';
-                    document.getElementById('apiToken').value = config.baserow.apiToken || '';
-                    document.getElementById('databaseId').value = config.baserow.databaseId || '';
-                }
-
-                // Preencher campos do M3U
-                if (config.m3u) {
-                    document.getElementById('xtreamBaseUrl').value = config.m3u.xtreamBaseUrl || '';
-                    document.getElementById('xtreamUsername').value = config.m3u.xtreamUsername || '';
-                    document.getElementById('xtreamPassword').value = config.m3u.xtreamPassword || '';
-                }
-
-                this.showAlert('Configurações carregadas do servidor.', 'info');
-            }
-        } catch (error) {
-            console.error('Erro ao carregar configuração do servidor:', error);
-            this.showAlert('Não foi possível carregar as configurações do servidor.', 'warning');
-        }
+        // Esta função foi movida para main.js (loadUserConfig)
+        // e é chamada na inicialização do app.
     }
 
     // Implementar funções restantes de CRUD, paginação, etc.

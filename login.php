@@ -15,28 +15,35 @@ if (empty($username) || empty($password)) {
 }
 
 // Buscar usuário no banco de dados
-$stmt = $conn->prepare("SELECT password FROM users WHERE email = ?");
-$stmt->bind_param("s", $username);
-$stmt->execute();
-$result = $stmt->get_result();
+$stmt = $conn->prepare("SELECT id, password FROM users WHERE email = :username");
+$stmt->execute([':username' => $username]);
+$user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-if ($result->num_rows > 0) {
-    $user = $result->fetch_assoc();
+if ($user) {
     $hashed_password = $user['password'];
 
     // Verificar a senha
     if (password_verify($password, $hashed_password)) {
-        // Iniciar sessão ou gerar token JWT aqui, se necessário
+        // Iniciar sessão
         session_start();
-        $_SESSION['user'] = $username;
+        $_SESSION['user_id'] = $user['id'];
+        $_SESSION['user_email'] = $username;
         echo json_encode(['success' => true, 'message' => 'Login bem-sucedido!']);
     } else {
         echo json_encode(['success' => false, 'message' => 'Senha inválida.']);
     }
 } else {
-    echo json_encode(['success' => false, 'message' => 'Usuário não encontrado.']);
+    // Se o usuário não existe, vamos criá-lo
+    $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+    $stmt = $conn->prepare("INSERT INTO users (email, password) VALUES (:username, :password)");
+    if ($stmt->execute([':username' => $username, ':password' => $hashed_password])) {
+        // Iniciar sessão
+        session_start();
+        $_SESSION['user_id'] = $conn->lastInsertId();
+        $_SESSION['user_email'] = $username;
+        echo json_encode(['success' => true, 'message' => 'Usuário criado e login bem-sucedido!']);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Erro ao criar usuário.']);
+    }
 }
-
-$stmt->close();
-$conn->close();
 ?>
