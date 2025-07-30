@@ -1395,10 +1395,15 @@ class M3UManager {
 
     formatItemForBaserow(item) {
         const itemType = this.getItemTypeForMapping(item);
-        const tableFields = this.baserowManager.ui?.tableFields || [];
-        const tableName = this.baserowManager.currentTable?.name || '';
+        const config = this.baserowManager.api.config;
+        const mapping = itemType === 'episode' ? config.mapping_episodios : config.mapping_conteudos;
         
-        return this.fieldMapper.mapItemToBaserow(item, tableFields, tableName, itemType);
+        if (!mapping) {
+            this.showAlert('Mapeamento de campos não configurado.', 'danger');
+            throw new Error('Mapeamento de campos não configurado.');
+        }
+
+        return this.fieldMapper.mapItemToBaserow(item, itemType, mapping);
     }
 
     getItemTypeForMapping(item) {

@@ -720,7 +720,20 @@ class BaserowManager {
                 if (config.baserow_api_token) document.getElementById('apiToken').value = config.baserow_api_token;
                 if (config.conteudos_table_id) document.getElementById('conteudosTableId').value = config.conteudos_table_id;
                 if (config.categorias_table_id) document.getElementById('categoriasTableId').value = config.categorias_table_id;
+                if (config.episodios_table_id) document.getElementById('episodiosTableId').value = config.episodios_table_id;
                 if (config.banners_table_id) document.getElementById('bannersTableId').value = config.banners_table_id;
+                if (config.usuarios_table_id) document.getElementById('usuariosTableId').value = config.usuarios_table_id;
+
+                // Preencher mapeamentos
+                if (config.mapping_conteudos) {
+                    const mapping = JSON.parse(config.mapping_conteudos);
+                    document.querySelectorAll('[data-mapping="conteudos"]').forEach(input => {
+                        if (mapping[input.name]) {
+                            input.value = mapping[input.name];
+                        }
+                    });
+                }
+                // (Adicionar lógica para episodios quando implementado)
 
                 // Preencher campos do M3U
                 if (config.m3u_url) document.getElementById('xtreamBaseUrl').value = config.m3u_url;
@@ -750,12 +763,23 @@ class BaserowManager {
      */
     async saveUserConfig() {
         try {
+            const mappingConteudos = {};
+            document.querySelectorAll('[data-mapping="conteudos"]').forEach(input => {
+                if (input.value) {
+                    mappingConteudos[input.name] = input.value;
+                }
+            });
+
             const data = {
                 baserow_api_url: document.getElementById('apiUrl').value,
                 baserow_api_token: document.getElementById('apiToken').value,
                 conteudos_table_id: document.getElementById('conteudosTableId').value,
                 categorias_table_id: document.getElementById('categoriasTableId').value,
+                episodios_table_id: document.getElementById('episodiosTableId').value,
                 banners_table_id: document.getElementById('bannersTableId').value,
+                usuarios_table_id: document.getElementById('usuariosTableId').value,
+                mapping_conteudos: mappingConteudos,
+                // Adicionar mapping_episodios aqui quando implementado
                 m3u_url: document.getElementById('xtreamBaseUrl').value,
                 m3u_username: document.getElementById('xtreamUsername').value,
                 m3u_password: document.getElementById('xtreamPassword').value
