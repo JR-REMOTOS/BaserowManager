@@ -234,6 +234,8 @@ class UIManager {
             token: document.getElementById('apiToken')?.value?.trim(),
             conteudosTableId: document.getElementById('conteudosTableId')?.value?.trim(),
             categoriasTableId: document.getElementById('categoriasTableId')?.value?.trim(),
+            episodiosTableId: document.getElementById('episodiosTableId')?.value?.trim(),
+            usuariosTableId: document.getElementById('usuariosTableId')?.value?.trim(),
             bannersTableId: document.getElementById('bannersTableId')?.value?.trim()
         };
 
