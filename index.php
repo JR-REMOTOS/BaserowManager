@@ -172,14 +172,6 @@
                         </div>
                     </div>
                     
-                    <!-- Seletor de Site -->
-                    <div class="mb-4">
-                        <label class="form-label text-white-50 small">Site Baserow:</label>
-                        <select class="form-control site-selector" id="siteSelector">
-                            <option value="">Selecione um site...</option>
-                        </select>
-                    </div>
-
                     <!-- Configuração -->
                     <div class="mb-4">
                         <button class="btn btn-light w-100 btn-custom" onclick="app.toggleConfig()">
@@ -286,20 +278,9 @@
                     
                     <form id="configForm" class="position-relative">
                         <div class="row">
-                            <div class="col-md-8 mb-3">
+                            <div class="col-md-12 mb-3">
                                 <label class="form-label">URL da API Baserow</label>
-                                <select class="form-control mb-2" id="apiUrlSelect" onchange="app.updateApiUrl()">
-                                    <option value="custom">URL Personalizada</option>
-                                    <option value="https://api.baserow.io">Baserow Oficial (api.baserow.io)</option>
-                                    <option value="http://basebanco.site">Baserow VPS (basebanco.site)</option>
-                                </select>
                                 <input type="url" class="form-control" id="apiUrl" placeholder="https://api.baserow.io" required>
-                                <div class="form-text text-white-50">Selecione uma opção ou digite sua URL</div>
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label">Database ID</label>
-                                <input type="text" class="form-control" id="databaseId" placeholder="Digite o ID">
-                                <div class="form-text text-white-50">ID do banco de dados</div>
                             </div>
                         </div>
                         <div class="row">
@@ -315,6 +296,22 @@
                                     <i class="fas fa-lightbulb"></i> 
                                     Para obter o token: Baserow → Settings → API tokens → Create token
                                 </div>
+                            </div>
+                        </div>
+                        <hr class="my-4">
+                        <h5 class="mb-3">IDs das Tabelas</h5>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Tabela de Conteúdos</label>
+                                <input type="text" class="form-control" id="conteudosTableId" placeholder="ID da Tabela">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Tabela de Categorias</label>
+                                <input type="text" class="form-control" id="categoriasTableId" placeholder="ID da Tabela">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Tabela de Banners</label>
+                                <input type="text" class="form-control" id="bannersTableId" placeholder="ID da Tabela">
                             </div>
                         </div>
                         <div class="d-flex gap-2 flex-wrap">

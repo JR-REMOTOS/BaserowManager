@@ -170,57 +170,6 @@ class UIManager {
         }
     }
 
-    // Renderizar seletor de site
-    renderSiteSelector() {
-        const siteSelector = document.getElementById('siteSelector');
-        if (!siteSelector) return;
-
-        const options = Object.entries(BASEROW_CONFIGS).map(([key, config]) => 
-            `<option value="${key}">${config.name}</option>`
-        ).join('');
-
-        siteSelector.innerHTML = '<option value="">Selecione um site...</option>' + options;
-        siteSelector.addEventListener('change', (e) => this.handleSiteChange(e.target.value));
-    }
-
-    // Tratar mudança de site
-    async handleSiteChange(siteName) {
-        try {
-            this.api.setSite(siteName);
-            this.selectedTable = null;
-            this.currentRecords = [];
-            
-            this.updateSiteInfo();
-            this.showEmptyState();
-            this.clearTablesList();
-            this.hideRecordForm();
-
-            this.showAlert(`Site alterado para: ${BASEROW_CONFIGS[siteName].name}`, 'info');
-        } catch (error) {
-            this.showAlert('Erro ao alterar site: ' + error.message, 'danger');
-        }
-    }
-
-    // Atualizar informações do site
-    updateSiteInfo() {
-        const config = this.api.getCurrentConfig();
-        const siteInfo = document.getElementById('siteInfo');
-        
-        if (siteInfo) {
-            const connectionStatus = config.isConnected ? '🟢 Conectado' : '🔴 Desconectado';
-            const m3uStatus = this.isM3UActive ? ' | 📺 M3U Ativo' : '';
-            
-            siteInfo.innerHTML = `
-                <small class="text-white-50">
-                    ${config.config?.name || 'Não configurado'} | 
-                    ${connectionStatus}${m3uStatus}
-                </small>
-            `;
-        }
-
-        // Atualizar info na configuração
-        this.updateConfigInfo();
-    }
 
     // Atualizar informações na configuração
     updateConfigInfo() {
@@ -307,77 +256,38 @@ class UIManager {
         this.showAlert('⚡ Configurações preenchidas! Cole seu token e clique em "Testar Conexão"', 'info');
     }
 
-    // Testar conexão
     async testConnection() {
-        const apiUrl = document.getElementById('apiUrl')?.value?.trim();
-        const token = document.getElementById('apiToken')?.value?.trim();
-        const databaseId = document.getElementById('databaseId')?.value?.trim();
+        const config = {
+            apiUrl: document.getElementById('apiUrl')?.value?.trim(),
+            token: document.getElementById('apiToken')?.value?.trim(),
+            conteudosTableId: document.getElementById('conteudosTableId')?.value?.trim(),
+            categoriasTableId: document.getElementById('categoriasTableId')?.value?.trim(),
+            bannersTableId: document.getElementById('bannersTableId')?.value?.trim()
+        };
 
-        if (!apiUrl || !token) {
-            this.showAlert('Preencha a URL da API e o token', 'warning');
+        if (!config.apiUrl || !config.token) {
+            this.showAlert('URL da API e Token são obrigatórios.', 'warning');
             return;
         }
 
-        if (!FIELD_VALIDATIONS.url.test(apiUrl)) {
-            this.showAlert('URL deve começar com http:// ou https://', 'warning');
-            return;
-        }
+        this.showProgress('Testando Conexão', 'Verificando credenciais e tabelas...');
+        this.api.setConfig(config);
 
-        this.showProgress('Testando Conexão', 'Verificando credenciais...');
+        const result = await this.api.testConnection();
 
-        try {
-            // Configurar API
-            const currentSite = this.api.currentSite;
-            const config = { ...BASEROW_CONFIGS[currentSite] };
-            config.apiUrl = apiUrl;
-            if (databaseId) config.databaseId = databaseId;
-
-            this.api.config = config;
-            this.api.setToken(token);
-
-            this.updateProgress(30, 'Testando acesso à API...');
-
-            // Testar conexão
-            const result = await this.api.testConnection();
+        if (result.success) {
+            this.updateProgress(100, 'Conexão estabelecida!');
+            this.showAlert(result.message, 'success');
             
-            this.updateProgress(70, 'Carregando tabelas...');
+            const tables = this.api.loadTables();
+            this.renderTables(tables);
 
-            if (result.success) {
-                // Carregar tabelas
-                const tables = await this.api.loadTables();
-                
-                this.updateProgress(100, 'Conexão estabelecida!');
-                
-                setTimeout(() => {
-                    this.hideProgress();
-                    this.renderTables(tables);
-                    this.updateSiteInfo();
-                    this.saveConfig();
-                    this.hideConfig();
-                    
-                    const expectedCount = Object.keys(BASEROW_CONFIGS[currentSite].tables).length;
-                    const foundCount = tables.length;
-                    
-                    if (foundCount >= expectedCount) {
-                        this.showAlert(`✅ Conectado com sucesso! ${foundCount} tabelas encontradas.`, 'success');
-                        
-                        // Se M3U está ativo, mostrar dica
-                        if (this.isM3UActive) {
-                            setTimeout(() => {
-                                this.showAlert('💡 Agora você pode importar dados M3U para suas tabelas!', 'info');
-                            }, 2000);
-                        }
-                    } else {
-                        this.showAlert(`⚠️ Conectado, mas apenas ${foundCount} de ${expectedCount} tabelas esperadas foram encontradas.`, 'warning');
-                    }
-                }, 1000);
-            } else {
-                this.hideProgress();
-                this.showAlert('Erro na conexão: ' + result.error, 'danger');
-            }
-        } catch (error) {
             this.hideProgress();
-            this.showAlert('Erro na conexão: ' + error.message, 'danger');
+            this.hideConfig();
+            this.saveConfig();
+        } else {
+            this.hideProgress();
+            this.showAlert(`Erro na conexão: ${result.error}`, 'danger');
         }
     }
 

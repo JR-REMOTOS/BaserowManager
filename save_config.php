@@ -14,7 +14,9 @@ $data = json_decode(file_get_contents('php://input'), true);
 
 $baserow_api_url = $data['baserow_api_url'] ?? null;
 $baserow_api_token = $data['baserow_api_token'] ?? null;
-$baserow_database_id = $data['baserow_database_id'] ?? null;
+$conteudos_table_id = $data['conteudos_table_id'] ?? null;
+$categorias_table_id = $data['categorias_table_id'] ?? null;
+$banners_table_id = $data['banners_table_id'] ?? null;
 $m3u_url = $data['m3u_url'] ?? null;
 $m3u_username = $data['m3u_username'] ?? null;
 $m3u_password = $data['m3u_password'] ?? null;
@@ -30,7 +32,9 @@ try {
         $stmt = $conn->prepare("UPDATE user_configs SET
             baserow_api_url = :baserow_api_url,
             baserow_api_token = :baserow_api_token,
-            baserow_database_id = :baserow_database_id,
+            conteudos_table_id = :conteudos_table_id,
+            categorias_table_id = :categorias_table_id,
+            banners_table_id = :banners_table_id,
             m3u_url = :m3u_url,
             m3u_username = :m3u_username,
             m3u_password = :m3u_password,
@@ -40,9 +44,9 @@ try {
     } else {
         // Inserir nova configuração
         $stmt = $conn->prepare("INSERT INTO user_configs
-            (user_id, baserow_api_url, baserow_api_token, baserow_database_id, m3u_url, m3u_username, m3u_password)
+            (user_id, baserow_api_url, baserow_api_token, conteudos_table_id, categorias_table_id, banners_table_id, m3u_url, m3u_username, m3u_password)
             VALUES
-            (:user_id, :baserow_api_url, :baserow_api_token, :baserow_database_id, :m3u_url, :m3u_username, :m3u_password)
+            (:user_id, :baserow_api_url, :baserow_api_token, :conteudos_table_id, :categorias_table_id, :banners_table_id, :m3u_url, :m3u_username, :m3u_password)
         ");
     }
 
@@ -50,7 +54,9 @@ try {
         ':user_id' => $user_id,
         ':baserow_api_url' => $baserow_api_url,
         ':baserow_api_token' => $baserow_api_token,
-        ':baserow_database_id' => $baserow_database_id,
+        ':conteudos_table_id' => $conteudos_table_id,
+        ':categorias_table_id' => $categorias_table_id,
+        ':banners_table_id' => $banners_table_id,
         ':m3u_url' => $m3u_url,
         ':m3u_username' => $m3u_username,
         ':m3u_password' => $m3u_password

@@ -718,7 +718,9 @@ class BaserowManager {
                 // Preencher campos do Baserow
                 if (config.baserow_api_url) document.getElementById('apiUrl').value = config.baserow_api_url;
                 if (config.baserow_api_token) document.getElementById('apiToken').value = config.baserow_api_token;
-                if (config.baserow_database_id) document.getElementById('databaseId').value = config.baserow_database_id;
+                if (config.conteudos_table_id) document.getElementById('conteudosTableId').value = config.conteudos_table_id;
+                if (config.categorias_table_id) document.getElementById('categoriasTableId').value = config.categorias_table_id;
+                if (config.banners_table_id) document.getElementById('bannersTableId').value = config.banners_table_id;
 
                 // Preencher campos do M3U
                 if (config.m3u_url) document.getElementById('xtreamBaseUrl').value = config.m3u_url;
@@ -741,7 +743,9 @@ class BaserowManager {
             const data = {
                 baserow_api_url: document.getElementById('apiUrl').value,
                 baserow_api_token: document.getElementById('apiToken').value,
-                baserow_database_id: document.getElementById('databaseId').value,
+                conteudos_table_id: document.getElementById('conteudosTableId').value,
+                categorias_table_id: document.getElementById('categoriasTableId').value,
+                banners_table_id: document.getElementById('bannersTableId').value,
                 m3u_url: document.getElementById('xtreamBaseUrl').value,
                 m3u_username: document.getElementById('xtreamUsername').value,
                 m3u_password: document.getElementById('xtreamPassword').value
