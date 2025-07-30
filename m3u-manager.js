@@ -29,10 +29,11 @@ class M3UManager {
         this.init();
     }
 
-    init() {
+    async init() {
         this.setupEventListeners();
         this.initializeStatusIndicator();
         console.log('[M3U] M3U Manager inicializado');
+        await this.loadM3UContentFromDB();
     }
 
     initializeStatusIndicator() {
@@ -260,6 +261,13 @@ class M3UManager {
     }
 
     async loadXtreamContent(forceDownload = true) {
+        if (forceDownload) {
+            const confirmed = confirm("Isso limpará os dados M3U salvos localmente e buscará uma nova lista do servidor. Deseja continuar?");
+            if (!confirmed) {
+                return;
+            }
+        }
+
         const baseUrl = document.getElementById('xtreamBaseUrl')?.value?.trim();
         const username = document.getElementById('xtreamUsername')?.value?.trim();
         const password = document.getElementById('xtreamPassword')?.value?.trim();
@@ -419,6 +427,56 @@ class M3UManager {
 
         await this.processContent();
         await this.renderContent();
+
+        // Salvar conteúdo no banco de dados
+        await this.saveM3UContentToDB();
+    }
+
+    async loadM3UContentFromDB() {
+        try {
+            this.showAlert('🔄 Carregando conteúdo M3U salvo...', 'info');
+            const response = await fetch('load_m3u_content.php');
+            const result = await response.json();
+
+            if (result.success && result.data && result.data.length > 0) {
+                this.currentPlaylist = result.data;
+                await this.processContent();
+                await this.renderContent();
+                this.showAlert('✅ Conteúdo M3U carregado do banco de dados.', 'success');
+            } else {
+                this.showAlert('Nenhum conteúdo M3U local encontrado.', 'info');
+            }
+        } catch (error) {
+            console.error('[M3U] Erro ao carregar conteúdo do DB:', error);
+            this.showAlert('❌ Erro ao carregar conteúdo M3U local.', 'danger');
+        }
+    }
+
+    async saveM3UContentToDB() {
+        if (!this.currentPlaylist || this.currentPlaylist.length === 0) {
+            return;
+        }
+
+        try {
+            this.showAlert('💾 Salvando conteúdo da lista no banco de dados...', 'info');
+            const response = await fetch('save_m3u_content.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(this.currentPlaylist)
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                this.showAlert('✅ Conteúdo da lista salvo com sucesso!', 'success');
+            } else {
+                this.showAlert('❌ Erro ao salvar conteúdo da lista: ' + result.message, 'danger');
+            }
+        } catch (error) {
+            console.error('[M3U] Erro ao salvar conteúdo no DB:', error);
+            this.showAlert('❌ Erro de conexão ao salvar conteúdo da lista.', 'danger');
+        }
     }
 
     parseM3U(content) {

@@ -221,8 +221,8 @@
                                 <div class="input-group mb-2">
                                     <input type="text" id="xtreamConnectionName" class="form-control m3u-url-input" placeholder="Nome da conexão">
                                 </div>
-                                <button class="btn btn-success btn-custom w-100" type="button" id="loadXtreamBtn">
-                                    <i class="fas fa-plug me-2"></i>Conectar Xtream
+                                <button class="btn btn-primary btn-custom w-100" type="button" id="loadXtreamBtn" title="Força a atualização da lista a partir do servidor, limpando os dados salvos localmente.">
+                                    <i class="fas fa-sync-alt me-2"></i>Forçar Atualização da Lista
                                 </button>
                             </div>
                             <div id="m3uLoading" class="text-center mt-2" style="display: none;">

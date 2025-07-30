@@ -24,7 +24,25 @@ try {
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     )");
 
-    echo "Tabelas 'users' e 'user_configs' criadas com sucesso ou já existem.";
+    // Criar a tabela 'm3u_items' se não existir
+    $conn->exec("CREATE TABLE IF NOT EXISTS m3u_items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        type TEXT NOT NULL, -- 'movie', 'series', 'episode', 'channel'
+        name TEXT,
+        logo TEXT,
+        url TEXT,
+        -- Campos específicos para séries/episódios
+        series_name TEXT,
+        season INTEGER,
+        episode INTEGER,
+        -- Outros metadados
+        category TEXT,
+        raw_data TEXT, -- Para armazenar o objeto JSON completo do item
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )");
+
+    echo "Tabelas 'users', 'user_configs' e 'm3u_items' criadas com sucesso ou já existem.";
 
 } catch (PDOException $e) {
     echo "Erro ao configurar o banco de dados: " . $e->getMessage();
