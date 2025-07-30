@@ -321,6 +321,22 @@
                                 <label class="form-label">ID Tabela Banners</label>
                                 <input type="text" class="form-control" id="bannersTableId" placeholder="ID da Tabela de Banners">
                             </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">ID Tabela Canais</label>
+                                <input type="text" class="form-control" id="canaisTableId" placeholder="ID da Tabela de Canais">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">ID Tabela Pagamentos</label>
+                                <input type="text" class="form-control" id="pagamentosTableId" placeholder="ID da Tabela de Pagamentos">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">ID Tabela Planos</label>
+                                <input type="text" class="form-control" id="planosTableId" placeholder="ID da Tabela de Planos">
+                            </div>
+                             <div class="col-md-4 mb-3">
+                                <label class="form-label">ID Tabela Tv Categoria</label>
+                                <input type="text" class="form-control" id="tvCategoriaTableId" placeholder="ID da Tabela de Tv Categoria">
+                            </div>
                         </div>
                         <hr class="my-4">
                         <h5 class="mb-3">Mapeamento de Campos</h5>

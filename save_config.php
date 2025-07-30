@@ -19,6 +19,10 @@ $categorias_table_id = $data['categorias_table_id'] ?? null;
 $episodios_table_id = $data['episodios_table_id'] ?? null;
 $banners_table_id = $data['banners_table_id'] ?? null;
 $usuarios_table_id = $data['usuarios_table_id'] ?? null;
+$canais_table_id = $data['canais_table_id'] ?? null;
+$pagamentos_table_id = $data['pagamentos_table_id'] ?? null;
+$planos_table_id = $data['planos_table_id'] ?? null;
+$tv_categoria_table_id = $data['tv_categoria_table_id'] ?? null;
 $mapping_conteudos = isset($data['mapping_conteudos']) ? json_encode($data['mapping_conteudos']) : null;
 $mapping_episodios = isset($data['mapping_episodios']) ? json_encode($data['mapping_episodios']) : null;
 $m3u_url = $data['m3u_url'] ?? null;
@@ -41,6 +45,10 @@ try {
             episodios_table_id = :episodios_table_id,
             banners_table_id = :banners_table_id,
             usuarios_table_id = :usuarios_table_id,
+            canais_table_id = :canais_table_id,
+            pagamentos_table_id = :pagamentos_table_id,
+            planos_table_id = :planos_table_id,
+            tv_categoria_table_id = :tv_categoria_table_id,
             mapping_conteudos = :mapping_conteudos,
             mapping_episodios = :mapping_episodios,
             m3u_url = :m3u_url,
@@ -52,9 +60,9 @@ try {
     } else {
         // Inserir nova configuração
         $stmt = $conn->prepare("INSERT INTO user_configs
-            (user_id, baserow_api_url, baserow_api_token, conteudos_table_id, categorias_table_id, episodios_table_id, banners_table_id, usuarios_table_id, mapping_conteudos, mapping_episodios, m3u_url, m3u_username, m3u_password)
+            (user_id, baserow_api_url, baserow_api_token, conteudos_table_id, categorias_table_id, episodios_table_id, banners_table_id, usuarios_table_id, canais_table_id, pagamentos_table_id, planos_table_id, tv_categoria_table_id, mapping_conteudos, mapping_episodios, m3u_url, m3u_username, m3u_password)
             VALUES
-            (:user_id, :baserow_api_url, :baserow_api_token, :conteudos_table_id, :categorias_table_id, :episodios_table_id, :banners_table_id, :usuarios_table_id, :mapping_conteudos, :mapping_episodios, :m3u_url, :m3u_username, :m3u_password)
+            (:user_id, :baserow_api_url, :baserow_api_token, :conteudos_table_id, :categorias_table_id, :episodios_table_id, :banners_table_id, :usuarios_table_id, :canais_table_id, :pagamentos_table_id, :planos_table_id, :tv_categoria_table_id, :mapping_conteudos, :mapping_episodios, :m3u_url, :m3u_username, :m3u_password)
         ");
     }
 
@@ -67,6 +75,10 @@ try {
         ':episodios_table_id' => $episodios_table_id,
         ':banners_table_id' => $banners_table_id,
         ':usuarios_table_id' => $usuarios_table_id,
+        ':canais_table_id' => $canais_table_id,
+        ':pagamentos_table_id' => $pagamentos_table_id,
+        ':planos_table_id' => $planos_table_id,
+        ':tv_categoria_table_id' => $tv_categoria_table_id,
         ':mapping_conteudos' => $mapping_conteudos,
         ':mapping_episodios' => $mapping_episodios,
         ':m3u_url' => $m3u_url,

@@ -17,7 +17,11 @@ class BaserowAPI {
             categoriasTableId: config.categoriasTableId,
             episodiosTableId: config.episodiosTableId,
             usuariosTableId: config.usuariosTableId,
-            bannersTableId: config.bannersTableId
+            bannersTableId: config.bannersTableId,
+            canaisTableId: config.canaisTableId,
+            pagamentosTableId: config.pagamentosTableId,
+            planosTableId: config.planosTableId,
+            tvCategoriaTableId: config.tvCategoriaTableId
         };
         this.token = config.token;
         this.isConnected = false;
@@ -228,7 +232,11 @@ class BaserowAPI {
             Categorias: this.config.categoriasTableId,
             Episódios: this.config.episodiosTableId,
             Usuários: this.config.usuariosTableId,
-            Banners: this.config.bannersTableId
+            Banners: this.config.bannersTableId,
+            Canais: this.config.canaisTableId,
+            Pagamentos: this.config.pagamentosTableId,
+            Planos: this.config.planosTableId,
+            'Tv Categoria': this.config.tvCategoriaTableId
         };
 
         for (const [name, id] of Object.entries(tableIds)) {
@@ -258,7 +266,11 @@ class BaserowAPI {
             { id: this.config.categoriasTableId, name: 'Categorias' },
             { id: this.config.episodiosTableId, name: 'Episódios' },
             { id: this.config.usuariosTableId, name: 'Usuários' },
-            { id: this.config.bannersTableId, name: 'Banners' }
+            { id: this.config.bannersTableId, name: 'Banners' },
+            { id: this.config.canaisTableId, name: 'Canais' },
+            { id: this.config.pagamentosTableId, name: 'Pagamentos' },
+            { id: this.config.planosTableId, name: 'Planos' },
+            { id: this.config.tvCategoriaTableId, name: 'Tv Categoria' }
         ];
 
         return tables.filter(t => t.id); // Retorna apenas as tabelas que têm um ID configurado

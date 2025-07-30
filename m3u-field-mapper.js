@@ -49,21 +49,39 @@ class M3UFieldMapper {
      * @param {object} series - O objeto da série.
      * @returns {Array} - Um array de objetos, um para cada temporada.
      */
-    mapSeriesHeader(series) {
+    mapSeriesHeader(series, mapping = {}) {
         const seriesData = [];
-        const seasons = [...new Set(series.episodes.map(ep => ep.season || 1))]; // Pega temporadas únicas
+        const seasons = [...new Set(series.episodes.map(ep => ep.season || 1))];
 
         for (const season of seasons) {
-            seriesData.push({
+            const sourceData = {
                 'Nome': series.name,
-                'Views': 0,
                 'Capa': series.logo || (series.episodes[0] ? series.episodes[0].logo : ''),
                 'Categoria': series.group || 'Séries',
-                'Sinopse': '', // O M3U padrão não tem sinopse
+                'Sinopse': '',
                 'Tipo': 'Serie',
                 'Temporadas': season,
-                'Idioma': 'DUB' // Valor padrão
-            });
+                'Idioma': 'DUB',
+                // Deixar Link/URL vazios intencionalmente para a entrada da série
+                'Link': '',
+                'View': 0,
+                'TMDB': '',
+                'Nota': 0,
+                'Tempo': 0,
+                'Valor': 0,
+                'Tipo Conteudo': 'Gratuito',
+                'Meu': false,
+                'Destaque': false,
+                'Data de Lançamento': new Date().toISOString().split('T')[0],
+            };
+
+            const mappedData = {};
+            for (const [key, value] of Object.entries(mapping)) {
+                if (value && sourceData.hasOwnProperty(key) && key !== 'Link') { // Ignorar o Link
+                    mappedData[value] = sourceData[key];
+                }
+            }
+            seriesData.push(mappedData);
         }
         return seriesData;
     }

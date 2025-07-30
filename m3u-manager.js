@@ -1207,9 +1207,9 @@ class M3UManager {
         const itemType = this.getItemTypeForMapping(item);
         const isEpisode = itemType === 'episode';
         
-        const tables = this.baserowManager.api.config.tables;
-        const tableId = isEpisode ? tables.episodios.id : tables.conteudos.id;
-        const tableName = isEpisode ? tables.episodios.name : tables.conteudos.name;
+        const apiConfig = this.baserowManager.api.config;
+        const tableId = isEpisode ? apiConfig.episodiosTableId : apiConfig.conteudosTableId;
+        const tableName = isEpisode ? 'Episódios' : 'Conteúdos';
 
         if (!tableId) {
             this.showAlert(`⚠️ Tabela para "${itemType}" não encontrada na configuração.`, 'danger');
@@ -1242,9 +1242,9 @@ class M3UManager {
     }
 
     async addAllItems(category) {
-        const tables = this.baserowManager.api.config.tables;
-        const moviesTableId = tables.conteudos.id;
-        const episodesTableId = tables.episodios.id;
+        const apiConfig = this.baserowManager.api.config;
+        const moviesTableId = apiConfig.conteudosTableId;
+        const episodesTableId = apiConfig.episodiosTableId;
 
         if (!moviesTableId || !episodesTableId) {
             this.showAlert('⚠️ IDs das tabelas de conteúdos ou episódios não encontrados na configuração.', 'danger');
@@ -1283,7 +1283,8 @@ class M3UManager {
             this.showAlert(`🚀 Iniciando adição em massa de ${items.length} itens...`, 'info');
 
             if (isSeries) {
-                const seriesHeaderData = this.fieldMapper.mapSeriesHeader(this.processedContent.series[seriesName]);
+                const conteudosMapping = this.baserowManager.api.config.mapping_conteudos;
+                const seriesHeaderData = this.fieldMapper.mapSeriesHeader(this.processedContent.series[seriesName], conteudosMapping);
                 for (const seasonData of seriesHeaderData) {
                     try {
                         await this.baserowManager.api.createRecord(moviesTableId, seasonData);
@@ -1336,9 +1337,9 @@ class M3UManager {
             return;
         }
         
-        const tables = this.baserowManager.api.config.tables;
-        const moviesTableId = tables.conteudos.id;
-        const episodesTableId = tables.episodios.id;
+        const apiConfig = this.baserowManager.api.config;
+        const moviesTableId = apiConfig.conteudosTableId;
+        const episodesTableId = apiConfig.episodiosTableId;
 
         if (!moviesTableId || !episodesTableId) {
             this.showAlert('⚠️ IDs das tabelas de conteúdos ou episódios não encontrados na configuração.', 'danger');

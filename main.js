@@ -723,6 +723,10 @@ class BaserowManager {
                 if (config.episodios_table_id) document.getElementById('episodiosTableId').value = config.episodios_table_id;
                 if (config.banners_table_id) document.getElementById('bannersTableId').value = config.banners_table_id;
                 if (config.usuarios_table_id) document.getElementById('usuariosTableId').value = config.usuarios_table_id;
+                if (config.canais_table_id) document.getElementById('canaisTableId').value = config.canais_table_id;
+                if (config.pagamentos_table_id) document.getElementById('pagamentosTableId').value = config.pagamentos_table_id;
+                if (config.planos_table_id) document.getElementById('planosTableId').value = config.planos_table_id;
+                if (config.tv_categoria_table_id) document.getElementById('tvCategoriaTableId').value = config.tv_categoria_table_id;
 
                 // Preencher mapeamentos
                 if (config.mapping_conteudos) {
@@ -778,6 +782,10 @@ class BaserowManager {
                 episodios_table_id: document.getElementById('episodiosTableId').value,
                 banners_table_id: document.getElementById('bannersTableId').value,
                 usuarios_table_id: document.getElementById('usuariosTableId').value,
+                canais_table_id: document.getElementById('canaisTableId').value,
+                pagamentos_table_id: document.getElementById('pagamentosTableId').value,
+                planos_table_id: document.getElementById('planosTableId').value,
+                tv_categoria_table_id: document.getElementById('tvCategoriaTableId').value,
                 mapping_conteudos: mappingConteudos,
                 // Adicionar mapping_episodios aqui quando implementado
                 m3u_url: document.getElementById('xtreamBaseUrl').value,
