@@ -229,6 +229,13 @@ class UIManager {
     }
 
     async testConnection() {
+        const mappingConteudos = {};
+        document.querySelectorAll('[data-mapping="conteudos"]').forEach(input => {
+            if (input.value) {
+                mappingConteudos[input.name] = input.value;
+            }
+        });
+
         const config = {
             apiUrl: document.getElementById('apiUrl')?.value?.trim(),
             token: document.getElementById('apiToken')?.value?.trim(),
@@ -236,7 +243,13 @@ class UIManager {
             categoriasTableId: document.getElementById('categoriasTableId')?.value?.trim(),
             episodiosTableId: document.getElementById('episodiosTableId')?.value?.trim(),
             usuariosTableId: document.getElementById('usuariosTableId')?.value?.trim(),
-            bannersTableId: document.getElementById('bannersTableId')?.value?.trim()
+            bannersTableId: document.getElementById('bannersTableId')?.value?.trim(),
+            canaisTableId: document.getElementById('canaisTableId')?.value?.trim(),
+            pagamentosTableId: document.getElementById('pagamentosTableId')?.value?.trim(),
+            planosTableId: document.getElementById('planosTableId')?.value?.trim(),
+            tvCategoriaTableId: document.getElementById('tvCategoriaTableId')?.value?.trim(),
+            mapping_conteudos: mappingConteudos
+            // Adicionar mapping_episodios quando implementado
         };
 
         if (!config.apiUrl || !config.token) {

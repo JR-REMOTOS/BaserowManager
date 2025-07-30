@@ -21,7 +21,9 @@ class BaserowAPI {
             canaisTableId: config.canaisTableId,
             pagamentosTableId: config.pagamentosTableId,
             planosTableId: config.planosTableId,
-            tvCategoriaTableId: config.tvCategoriaTableId
+            tvCategoriaTableId: config.tvCategoriaTableId,
+            mapping_conteudos: config.mapping_conteudos,
+            mapping_episodios: config.mapping_episodios
         };
         this.token = config.token;
         this.isConnected = false;
