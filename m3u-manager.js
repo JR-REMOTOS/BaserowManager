@@ -1,0 +1,1480 @@
+/**
+ * Gerenciador de Listas M3U - VERSÃO MELHORADA COM TRATAMENTO DE ERROS E RENDERIZAÇÃO PROGRESSIVA
+ * Funcionalidades para ler, processar e importar conteúdo M3U para o Baserow
+ */
+
+import XtreamAPI from './xtream-api.js';
+import M3UFieldMapper from './m3u-field-mapper.js';
+import { FileUtils, DOMUtils, FeedbackUtils } from './utils.js';
+
+class M3UManager {
+    constructor(baserowManager) {
+        this.baserowManager = baserowManager;
+        this.currentPlaylist = null;
+        this.processedContent = {
+            movies: [],
+            series: {},
+            channels: []
+        };
+        this.selectedItems = new Set();
+        this.isLoading = false;
+        this.xtreamAPI = new XtreamAPI();
+        this.fieldMapper = new M3UFieldMapper();
+        this.connectionStatus = 'disconnected';
+        this.lastError = null;
+        this.retryCount = 0;
+        this.maxRetries = 3;
+        this.batchSize = 100; // Tamanho do lote para processamento e renderização
+        this.renderedCounts = { movies: 0, series: 0, channels: 0 }; // Contador de itens renderizados por categoria
+        this.init();
+    }
+
+    init() {
+        this.setupEventListeners();
+        this.initializeStatusIndicator();
+        console.log('[M3U] M3U Manager inicializado');
+    }
+
+    initializeStatusIndicator() {
+        const statusIndicator = document.getElementById('xtreamStatus') || this.createStatusIndicator();
+        this.updateConnectionStatus('disconnected');
+    }
+
+    createStatusIndicator() {
+        const indicator = document.createElement('div');
+        indicator.id = 'xtreamStatus';
+        indicator.className = 'xtream-status mb-3';
+        indicator.innerHTML = `
+            <div class="d-flex align-items-center">
+                <div class="status-dot me-2" style="width: 12px; height: 12px; border-radius: 50%;"></div>
+                <span class="status-text">Desconectado</span>
+                <small class="status-details ms-2 text-muted"></small>
+            </div>
+        `;
+        
+        const xtreamForm = document.getElementById('xtreamForm');
+        if (xtreamForm) {
+            xtreamForm.insertBefore(indicator, xtreamForm.firstChild);
+        }
+        
+        return indicator;
+    }
+
+    updateConnectionStatus(status, details = '') {
+        this.connectionStatus = status;
+        const statusIndicator = document.getElementById('xtreamStatus');
+        if (!statusIndicator) return;
+
+        const statusDot = statusIndicator.querySelector('.status-dot');
+        const statusText = statusIndicator.querySelector('.status-text');
+        const statusDetails = statusIndicator.querySelector('.status-details');
+
+        const statusConfig = {
+            disconnected: { color: '#6c757d', text: 'Desconectado', icon: '⚫' },
+            connecting: { color: '#ffc107', text: 'Conectando...', icon: '🔄' },
+            connected: { color: '#198754', text: 'Conectado', icon: '🟢' },
+            error: { color: '#dc3545', text: 'Erro de Conexão', icon: '🔴' }
+        };
+
+        const config = statusConfig[status] || statusConfig.disconnected;
+        
+        if (statusDot) statusDot.style.backgroundColor = config.color;
+        if (statusText) statusText.textContent = `${config.icon} ${config.text}`;
+        if (statusDetails) statusDetails.textContent = details;
+    }
+
+    setupEventListeners() {
+        document.addEventListener('click', (e) => {
+            if (e.target.id === 'loadXtreamBtn') {
+                this.loadXtreamContent(true); // Forçar novo download
+            } else if (e.target.id === 'xtreamPasswordToggle') {
+                this.toggleXtreamPasswordVisibility();
+            } else if (e.target.id === 'clearCacheBtn') {
+                this.clearCacheAndReload();
+            } else if (e.target.id === 'testXtreamBtn') {
+                this.testXtreamConnection();
+            } else if (e.target.classList.contains('add-single-item')) {
+                this.addSingleItem(e.target.dataset.itemId);
+            } else if (e.target.classList.contains('add-all-items')) {
+                this.addAllItems(e.target.dataset.category);
+            } else if (e.target.classList.contains('series-toggle')) {
+                this.toggleSeries(e.target.dataset.seriesName);
+            } else if (e.target.id === 'selectAllItems') {
+                this.toggleSelectAll();
+            } else if (e.target.id === 'addSelectedItems') {
+                this.addSelectedItems();
+            } else if (e.target.id === 'loadMoreMovies') {
+                this.loadMoreItems('movies');
+            } else if (e.target.id === 'loadMoreSeries') {
+                this.loadMoreItems('series');
+            } else if (e.target.id === 'loadMoreChannels') {
+                this.loadMoreItems('channels');
+            }
+        });
+
+        document.addEventListener('change', (e) => {
+            if (e.target.classList.contains('item-checkbox')) {
+                this.handleItemSelection(e.target);
+            }
+        });
+
+        ['xtreamBaseUrl', 'xtreamUsername', 'xtreamPassword', 'xtreamConnectionName'].forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        document.getElementById('loadXtreamBtn')?.click();
+                    }
+                });
+            }
+        });
+
+        ['xtreamBaseUrl', 'xtreamUsername', 'xtreamPassword'].forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.addEventListener('input', () => this.validateXtreamCredentials());
+            }
+        });
+    }
+
+    validateXtreamCredentials() {
+        const baseUrl = document.getElementById('xtreamBaseUrl')?.value?.trim();
+        const username = document.getElementById('xtreamUsername')?.value?.trim();
+        const password = document.getElementById('xtreamPassword')?.value?.trim();
+        
+        const isValid = baseUrl && username && password && baseUrl.match(/^https?:\/\/.+/);
+        
+        const testBtn = document.getElementById('testXtreamBtn');
+        const loadBtn = document.getElementById('loadXtreamBtn');
+        
+        if (testBtn) testBtn.disabled = !isValid;
+        if (loadBtn) loadBtn.disabled = !isValid;
+        
+        return isValid;
+    }
+
+    async testXtreamConnection() {
+        const baseUrl = document.getElementById('xtreamBaseUrl')?.value?.trim();
+        const username = document.getElementById('xtreamUsername')?.value?.trim();
+        const password = document.getElementById('xtreamPassword')?.value?.trim();
+
+        if (!baseUrl || !username || !password) {
+            this.showAlert('⚠️ Preencha todos os campos primeiro', 'warning');
+            return;
+        }
+
+        try {
+            this.updateConnectionStatus('connecting', 'Testando credenciais...');
+            this.setLoading(true, 'testXtreamBtn');
+
+            this.xtreamAPI.setCredentials({ 
+                baseUrl, 
+                username, 
+                password, 
+                connectionName: 'test_connection' 
+            });
+
+            const authResult = await this.xtreamAPI.authenticate();
+            
+            this.updateConnectionStatus('connected', 'Credenciais válidas');
+            this.showAlert('✅ Conexão bem-sucedida! Credenciais válidas.\n\nSugestão: Clique em "Conectar Xtream" para carregar a lista.', 'success');
+            
+            if (authResult.user_info) {
+                const info = authResult.user_info;
+                let message = '📊 Informações da conta:\n';
+                if (info.username) message += `👤 Usuário: ${info.username}\n`;
+                if (info.status) message += `📈 Status: ${info.status}\n`;
+                if (info.exp_date) {
+                    const expDate = new Date(parseInt(info.exp_date) * 1000);
+                    message += `📅 Expira: ${expDate.toLocaleDateString('pt-BR')}\n`;
+                }
+                if (info.active_cons) message += `🔗 Conexões ativas: ${info.active_cons}\n`;
+                if (info.max_connections) message += `🔗 Máx. conexões: ${info.max_connections}`;
+                
+                this.showAlert(message, 'info');
+            }
+
+        } catch (error) {
+            console.error('[M3U] Erro no teste de conexão:', error);
+            this.updateConnectionStatus('error', this.getErrorMessage(error));
+            this.showAlert(`❌ Teste falhou: ${this.getErrorMessage(error)}\n\nSugestões:\n- Tente usar HTTP em vez de HTTPS\n- Verifique as credenciais\n- Considere configurar um proxy CORS local`, 'danger');
+        } finally {
+            this.setLoading(false, 'testXtreamBtn');
+        }
+    }
+
+    getErrorMessage(error) {
+        if (!error || !error.message) {
+            return 'Erro desconhecido - Verifique a conexão ou tente novamente';
+        }
+        const message = error.message.toLowerCase();
+        
+        if (message.includes('cors') || message.includes('cross-origin')) {
+            return 'Erro de CORS - Tente usar HTTP ou configurar um proxy local';
+        } else if (message.includes('credentials') || message.includes('authentication')) {
+            return 'Credenciais inválidas - Verifique usuário e senha';
+        } else if (message.includes('network') || message.includes('fetch')) {
+            return 'Erro de rede - Verifique conexão e URL';
+        } else if (message.includes('timeout')) {
+            return 'Timeout - Servidor demorou para responder';
+        } else if (message.includes('blocked')) {
+            return 'Requisição bloqueada - Problema de CORS';
+        } else if (message.includes('memory')) {
+            return 'Memória insuficiente - Tente carregar uma lista menor ou limpar o cache';
+        } else if (message.includes('created_on')) {
+            return 'Erro ao adicionar item: Campo created_on é somente leitura';
+        }
+        
+        return error.message;
+    }
+
+    toggleXtreamPasswordVisibility() {
+        const passwordInput = document.getElementById('xtreamPassword');
+        const eyeIcon = document.getElementById('xtreamPasswordToggle').querySelector('i');
+        if (passwordInput && eyeIcon) {
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                eyeIcon.className = 'fas fa-eye-slash';
+            } else {
+                passwordInput.type = 'password';
+                eyeIcon.className = 'fas fa-eye';
+            }
+        }
+    }
+
+    async clearCacheAndReload() {
+        try {
+            this.showAlert('🧹 Limpando cache...', 'info');
+            await this.xtreamAPI.clearCache();
+            
+            if (this.currentPlaylist && this.currentPlaylist.length > 0) {
+                this.showAlert('♻️ Recarregando conteúdo...', 'info');
+                await this.loadXtreamContent(true);
+            } else {
+                this.showAlert('✅ Cache limpo com sucesso!', 'success');
+            }
+        } catch (error) {
+            console.error('[M3U] Erro ao limpar cache:', error);
+            this.showAlert('❌ Erro ao limpar cache: ' + this.getErrorMessage(error), 'danger');
+        }
+    }
+
+    async loadXtreamContent(forceDownload = true) {
+        const baseUrl = document.getElementById('xtreamBaseUrl')?.value?.trim();
+        const username = document.getElementById('xtreamUsername')?.value?.trim();
+        const password = document.getElementById('xtreamPassword')?.value?.trim();
+        const connectionName = document.getElementById('xtreamConnectionName')?.value?.trim() || 'Xtream_Connection';
+
+        if (!baseUrl || !username || !password) {
+            this.showAlert('⚠️ Preencha todos os campos do Xtream Codes (URL, usuário e senha)', 'warning');
+            return;
+        }
+
+        if (!baseUrl.match(/^https?:\/\/.+/)) {
+            this.showAlert('⚠️ URL deve começar com http:// ou https://', 'warning');
+            return;
+        }
+
+        this.retryCount = 0;
+        await this.attemptXtreamLoad(baseUrl, username, password, connectionName, forceDownload);
+    }
+
+    async attemptXtreamLoad(baseUrl, username, password, connectionName, forceDownload) {
+        try {
+            this.setLoading(true);
+            this.updateConnectionStatus('connecting', 'Conectando ao servidor...');
+            this.showAlert('🔌 Conectando ao Xtream Codes...', 'info');
+
+            this.xtreamAPI.setCredentials({ baseUrl, username, password, connectionName });
+            
+            this.updateConnectionStatus('connecting', 'Verificando credenciais...');
+            this.showAlert('🔐 Verificando credenciais...', 'info');
+            
+            await this.xtreamAPI.authenticate();
+            
+            this.updateConnectionStatus('connected', 'Autenticado');
+            this.showAlert('✅ Autenticação bem-sucedida! Baixando conteúdo...', 'success');
+            
+            this.updateConnectionStatus('connected', 'Baixando playlist...');
+            const m3uContent = await this.xtreamAPI.downloadM3U(forceDownload);
+            
+            console.log('[M3U] Conteúdo M3U obtido, tamanho:', m3uContent.length);
+            console.log('[M3U] Primeiros 1000 caracteres do M3U:', m3uContent.substring(0, 1000));
+            
+            if (!m3uContent || m3uContent.length < 50) {
+                throw new Error('Conteúdo M3U está vazio ou muito pequeno. Verifique suas credenciais.');
+            }
+
+            this.showAlert('⚙️ Processando conteúdo...', 'info');
+            this.updateConnectionStatus('connected', 'Processando playlist...');
+
+            await this.processM3UContent(m3uContent);
+            
+            this.retryCount = 0;
+            this.lastError = null;
+            const stats = this.getTotalItemsStats();
+            this.updateConnectionStatus('connected', `${stats.total} itens carregados`);
+            this.showAlert(`🎉 Lista Xtream carregada com sucesso!\n\n📊 ${stats.total} itens encontrados:\n🎬 ${stats.movies} filmes\n📺 ${stats.series} séries\n📡 ${stats.channels} canais`, 'success');
+            
+        } catch (error) {
+            console.error('[M3U] Erro ao carregar Xtream:', error);
+            this.lastError = error;
+            
+            if (this.retryCount < this.maxRetries && this.shouldRetry(error)) {
+                this.retryCount++;
+                this.updateConnectionStatus('connecting', `Tentativa ${this.retryCount}/${this.maxRetries}...`);
+                this.showAlert(`🔄 Tentativa ${this.retryCount}/${this.maxRetries}... ${this.getErrorMessage(error)}`, 'warning');
+                
+                await new Promise(resolve => setTimeout(resolve, 2000 * this.retryCount));
+                return this.attemptXtreamLoad(baseUrl, username, password, connectionName, forceDownload);
+            }
+            
+            this.updateConnectionStatus('error', this.getErrorMessage(error));
+            this.showAlert(`❌ Erro ao carregar lista Xtream: ${this.getErrorMessage(error)}\n\nSugestões:\n- Tente usar HTTP em vez de HTTPS\n- Verifique as credenciais\n- Considere configurar um proxy CORS local`, 'danger');
+            
+            // Renderizar conteúdo parcial, se disponível
+            if (this.currentPlaylist?.length > 0) {
+                this.renderContent();
+            }
+        } finally {
+            this.setLoading(false);
+        }
+    }
+
+    shouldRetry(error) {
+        if (!error || !error.message) return false;
+        const message = error.message.toLowerCase();
+        return message.includes('network') || 
+               message.includes('timeout') || 
+               message.includes('cors') ||
+               message.includes('fetch') ||
+               !message.includes('credentials');
+    }
+
+    async processM3UContent(m3uContent) {
+        const splitContent = await this.xtreamAPI.splitM3U(m3uContent);
+        
+        this.currentPlaylist = [];
+        this.processedContent = {
+            movies: [],
+            series: {},
+            channels: []
+        };
+        this.renderedCounts = { movies: 0, series: 0, channels: 0 };
+        
+        let totalProcessed = 0;
+
+        for (const [type, content] of Object.entries(splitContent)) {
+            if (content && content !== '#EXTM3U' && content.includes('http')) {
+                console.log(`[M3U] Processando ${type} com ${content.split('\n').length} linhas`);
+                
+                try {
+                    const parsedItems = this.parseM3U(content);
+                    console.log(`[M3U] ${parsedItems.length} itens parseados para ${type}`, parsedItems.slice(0, 5));
+                    
+                    // Processar em lotes para evitar sobrecarga de memória
+                    for (let i = 0; i < parsedItems.length; i += this.batchSize) {
+                        const batch = parsedItems.slice(i, i + this.batchSize);
+                        batch.forEach(item => {
+                            item.type = type;
+                            item.originalType = type;
+                            this.currentPlaylist.push(item);
+                        });
+                        totalProcessed += batch.length;
+                        await new Promise(resolve => setTimeout(resolve, 10)); // Pequena pausa para liberar memória
+                    }
+                } catch (parseError) {
+                    console.error(`[M3U] Erro ao processar ${type}:`, parseError);
+                }
+            } else {
+                console.log(`[M3U] Nenhuma linha válida encontrada para ${type}`);
+            }
+        }
+
+        console.log('[M3U] Total de itens processados:', totalProcessed);
+        
+        if (totalProcessed === 0) {
+            console.log('[M3U] Tentando processar conteúdo completo como fallback');
+            const parsedItems = this.parseM3U(m3uContent);
+            for (let i = 0; i < parsedItems.length; i += this.batchSize) {
+                const batch = parsedItems.slice(i, i + this.batchSize);
+                batch.forEach(item => {
+                    item.type = 'movies';
+                    item.originalType = 'movies';
+                    this.currentPlaylist.push(item);
+                });
+                totalProcessed += batch.length;
+                await new Promise(resolve => setTimeout(resolve, 10));
+            }
+        }
+
+        if (totalProcessed === 0) {
+            throw new Error('Nenhum item válido encontrado na lista. Verifique o servidor Xtream ou suas credenciais.');
+        }
+
+        await this.processContent();
+        await this.renderContent();
+    }
+
+    parseM3U(content) {
+        if (!content) {
+            console.error('[M3U] Conteúdo M3U vazio');
+            return [];
+        }
+        
+        const lines = content.split(/[\r\n]+/).map(line => line.trim()).filter(line => line);
+        const items = [];
+        let currentItem = null;
+        
+        console.log('[M3U] Parsing M3U com', lines.length, 'linhas');
+        
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            console.log('[M3U] Processando linha:', line);
+            
+            if (line.startsWith('#EXTINF:')) {
+                if (currentItem && currentItem.url) {
+                    currentItem.id = this.generateId();
+                    items.push({ ...currentItem });
+                    console.log('[M3U] Item parseado:', currentItem);
+                }
+                
+                currentItem = this.parseExtinf(line);
+                
+                // Verificar se a próxima linha é uma URL
+                if (i + 1 < lines.length && this.isValidStreamUrl(lines[i + 1])) {
+                    currentItem.url = lines[i + 1];
+                    currentItem.id = this.generateId();
+                    items.push({ ...currentItem });
+                    console.log('[M3U] Item parseado com URL na próxima linha:', currentItem);
+                    i++; // Pular a linha da URL
+                    currentItem = null;
+                }
+            } else if (this.isValidStreamUrl(line)) {
+                if (currentItem) {
+                    currentItem.url = line;
+                    currentItem.id = this.generateId();
+                    items.push({ ...currentItem });
+                    console.log('[M3U] Item parseado:', currentItem);
+                    currentItem = null;
+                } else {
+                    const basicItem = {
+                        duration: -1,
+                        name: this.extractNameFromUrl(line),
+                        logo: '',
+                        group: 'Sem categoria',
+                        tvgId: '',
+                        tvgName: '',
+                        url: line,
+                        id: this.generateId()
+                    };
+                    items.push(basicItem);
+                    console.log('[M3U] Item básico parseado:', basicItem);
+                }
+            } else {
+                console.log('[M3U] Linha ignorada:', line);
+            }
+        }
+
+        if (currentItem && currentItem.url) {
+            currentItem.id = this.generateId();
+            items.push({ ...currentItem });
+            console.log('[M3U] Último item parseado:', currentItem);
+        }
+        
+        console.log('[M3U] Total de itens extraídos:', items.length, items.slice(0, 5));
+        return items;
+    }
+
+    parseExtinf(line) {
+        const item = {
+            duration: -1,
+            name: '',
+            logo: '',
+            group: '',
+            tvgId: '',
+            tvgName: '',
+            url: ''
+        };
+
+        console.log('[M3U] Parsing linha EXTINF:', line);
+
+        const durationMatch = line.match(/#EXTINF:\s*([^,]+)/i);
+        if (durationMatch) {
+            item.duration = parseFloat(durationMatch[1]) || -1;
+        }
+
+        const logoMatch = line.match(/tvg-logo=["']?([^"'\s]*)["']?/i);
+        if (logoMatch) item.logo = logoMatch[1];
+
+        const groupMatch = line.match(/group-title=["']?([^"']*)["']?/i);
+        if (groupMatch) item.group = groupMatch[1];
+
+        const tvgIdMatch = line.match(/tvg-id=["']?([^"']*)["']?/i);
+        if (tvgIdMatch) item.tvgId = tvgIdMatch[1];
+
+        const tvgNameMatch = line.match(/tvg-name=["']?([^"']*)["']?/i);
+        if (tvgNameMatch) item.tvgName = tvgNameMatch[1];
+
+        const nameMatch = line.match(/,\s*(.+)$/);
+        if (nameMatch) {
+            item.name = nameMatch[1].trim();
+        }
+        
+        if (!item.name || item.name === 'Sem Nome') {
+            item.name = item.tvgName || item.group || 'Sem Nome';
+        }
+
+        return item;
+    }
+
+    isValidStreamUrl(url) {
+        if (!url || typeof url !== 'string') return false;
+        
+        return (
+            url.match(/^https?:\/\/.+/i) ||
+            url.match(/\.(m3u8?|ts|mp4|mkv|avi|mov|flv)(\?.*)?$/i) ||
+            url.includes('/live/') ||
+            url.includes('/movie/') ||
+            url.includes('/series/') ||
+            url.includes('stream') ||
+            url.includes('play')
+        );
+    }
+
+    extractNameFromUrl(url) {
+        try {
+            const urlObj = new URL(url);
+            const pathname = urlObj.pathname;
+            const filename = pathname.split('/').pop();
+            
+            if (filename && filename !== '') {
+                return filename.replace(/\.(m3u8?|ts|mp4|mkv|avi|mov|flv)$/i, '');
+            }
+            
+            return urlObj.hostname + pathname;
+        } catch (e) {
+            const parts = url.split('/');
+            return parts[parts.length - 1] || 'Stream';
+        }
+    }
+
+    async processContent() {
+        this.processedContent = {
+            movies: [],
+            series: {},
+            channels: []
+        };
+        this.renderedCounts = { movies: 0, series: 0, channels: 0 };
+
+        console.log('[M3U] Iniciando processamento de', this.currentPlaylist.length, 'itens');
+        
+        for (let i = 0; i < this.currentPlaylist.length; i += this.batchSize) {
+            const batch = this.currentPlaylist.slice(i, i + this.batchSize);
+            for (const item of batch) {
+                const category = this.categorizeItem(item);
+                console.log('[M3U] Item categorizado:', item.name, category);
+                
+                switch (category.type) {
+                    case 'movie':
+                        this.processedContent.movies.push({
+                            ...item,
+                            category: category.category || item.group || 'Filmes'
+                        });
+                        break;
+                        
+                    case 'series':
+                        if (!this.processedContent.series[category.seriesName]) {
+                            this.processedContent.series[category.seriesName] = {
+                                name: category.seriesName,
+                                logo: item.logo,
+                                episodes: [],
+                                group: item.group || 'Séries'
+                            };
+                        }
+                        this.processedContent.series[category.seriesName].episodes.push({
+                            ...item,
+                            season: category.season,
+                            episode: category.episode,
+                            episodeName: category.episodeName,
+                            seriesName: category.seriesName
+                        });
+                        break;
+                        
+                    case 'channel':
+                        this.processedContent.channels.push({
+                            ...item,
+                            category: item.group || 'Canais'
+                        });
+                        break;
+                }
+            }
+            await new Promise(resolve => setTimeout(resolve, 10)); // Pequena pausa para liberar memória
+        }
+
+        // Ordenar episódios por temporada e episódio
+        Object.values(this.processedContent.series).forEach(series => {
+            series.episodes.sort((a, b) => {
+                if ((a.season || 0) !== (b.season || 0)) {
+                    return (a.season || 0) - (b.season || 0);
+                }
+                return (a.episode || 0) - (b.episode || 0);
+            });
+        });
+
+        // Validar categorização
+        this.validateCategorization();
+
+        const stats = this.getTotalItemsStats();
+        console.log('[M3U] Resultado do processamento:', stats);
+    }
+
+    validateCategorization() {
+        // Verificar se há itens mal categorizados
+        const uncategorized = this.currentPlaylist.filter(item => !item.type || !['movies', 'series'].includes(item.originalType));
+        if (uncategorized.length > 0) {
+            console.warn('[M3U] Itens não categorizados:', uncategorized.length, uncategorized.slice(0, 5));
+            // Reprocessar itens não categorizados como filmes por padrão
+            uncategorized.forEach(item => {
+                item.type = 'movies';
+                item.originalType = 'movies';
+                this.processedContent.movies.push({
+                    ...item,
+                    category: item.group || 'Filmes'
+                });
+            });
+        }
+
+        // Verificar consistência das séries
+        Object.values(this.processedContent.series).forEach(series => {
+            if (!series.episodes.length) {
+                console.warn('[M3U] Série sem episódios:', series.name);
+                delete this.processedContent.series[series.name];
+            }
+        });
+    }
+
+    categorizeItem(item) {
+        const name = (item.name || '').toLowerCase();
+        const group = (item.group || '').toLowerCase();
+        const originalType = item.type || item.originalType || '';
+        
+        // Priorizar o tipo original da lista M3U
+        if (originalType === 'movies') {
+            return { 
+                type: 'movie', 
+                category: item.group || 'Filmes' 
+            };
+        } else if (originalType === 'series') {
+            const seriesPatterns = [
+                /(.+?)\s*[s|season]\s*(\d+)\s*[e|ep|episode]\s*(\d+)(?:\s*[-:]?\s*(.+))?/i,
+                /(.+?)\s*(\d+)x(\d+)(?:\s*[-:]?\s*(.+))?/i,
+                /(.+?)\s*temporada\s*(\d+)\s*episodio\s*(\d+)(?:\s*[-:]?\s*(.+))?/i,
+                /(.+?)\s*t(\d+)e(\d+)(?:\s*[-:]?\s*(.+))?/i,
+                /(.+?)\s*-\s*(\d+)x(\d+)(?:\s*[-:]?\s*(.+))?/i,
+                /(.+?)\s*-\s*s(\d+)e(\d+)(?:\s*[-:]?\s*(.+))?/i
+            ];
+
+            for (const pattern of seriesPatterns) {
+                const match = name.match(pattern) || item.name.match(pattern);
+                if (match) {
+                    return {
+                        type: 'series',
+                        seriesName: match[1].trim(),
+                        season: parseInt(match[2]) || 1,
+                        episode: parseInt(match[3]) || 1,
+                        episodeName: match[4] ? match[4].trim() : `Episódio ${match[3]}`
+                    };
+                }
+            }
+            // Se não for identificado como episódio, mas o tipo original é 'series', ainda categorizar como série
+            return {
+                type: 'series',
+                seriesName: item.name || 'Série Desconhecida',
+                season: 1,
+                episode: 1,
+                episodeName: item.name || 'Episódio 1'
+            };
+        }
+
+        // Evitar categorizar como canal, já que a lista contém apenas filmes e séries
+        const seriesPatterns = [
+            /(.+?)\s*[s|season]\s*(\d+)\s*[e|ep|episode]\s*(\d+)(?:\s*[-:]?\s*(.+))?/i,
+            /(.+?)\s*(\d+)x(\d+)(?:\s*[-:]?\s*(.+))?/i,
+            /(.+?)\s*temporada\s*(\d+)\s*episodio\s*(\d+)(?:\s*[-:]?\s*(.+))?/i,
+            /(.+?)\s*t(\d+)e(\d+)(?:\s*[-:]?\s*(.+))?/i,
+            /(.+?)\s*-\s*(\d+)x(\d+)(?:\s*[-:]?\s*(.+))?/i,
+            /(.+?)\s*-\s*s(\d+)e(\d+)(?:\s*[-:]?\s*(.+))?/i
+        ];
+
+        for (const pattern of seriesPatterns) {
+            const match = name.match(pattern) || item.name.match(pattern);
+            if (match) {
+                return {
+                    type: 'series',
+                    seriesName: match[1].trim(),
+                    season: parseInt(match[2]) || 1,
+                    episode: parseInt(match[3]) || 1,
+                    episodeName: match[4] ? match[4].trim() : `Episódio ${match[3]}`
+                };
+            }
+        }
+
+        // Se não for identificado como série, categorizar como filme
+        return { 
+            type: 'movie',
+            category: item.group || 'Filmes'
+        };
+    }
+
+    async renderContent() {
+        let container = document.getElementById('m3uContent');
+        if (!container) {
+            console.warn('[M3U] Elemento m3uContent não encontrado, criando dinamicamente');
+            container = document.createElement('div');
+            container.id = 'm3uContent';
+            container.className = 'card border-0 shadow-sm mb-4 shadow-hover';
+            const mainContent = document.querySelector('.main-content') || document.body;
+            mainContent.insertBefore(container, mainContent.querySelector('#tableHeader'));
+        }
+
+        container.style.display = 'block';
+        container.style.visibility = 'visible';
+        container.style.opacity = '1';
+        console.log('[M3U] Renderizando conteúdo:', this.processedContent);
+
+        const stats = this.getTotalItemsStats();
+        console.log('[M3U] Estatísticas de renderização:', stats);
+
+        // Resetar contadores de renderização
+        this.renderedCounts = { movies: 0, series: 0, channels: 0 };
+
+        if (stats.total === 0) {
+            container.innerHTML = `
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <div class="text-center py-4">
+                            <i class="fas fa-exclamation-circle fa-3x mb-3"></i>
+                            <h5>Nenhum conteúdo encontrado</h5>
+                            <p>Verifique as credenciais Xtream.</p>
+                            <button class="btn btn-warning btn-sm" id="clearCacheBtn">
+                                <i class="fas fa-sync me-2"></i>Limpar Cache e Tentar Novamente
+                            </button>
+                            <button class="btn btn-info btn-sm ms-2" id="testXtreamBtn">
+                                <i class="fas fa-plug me-2"></i>Testar Conexão
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            console.log('[M3U] Renderizado estado vazio');
+            return;
+        }
+
+        // Ocultar a aba Canais se não houver canais
+        const showChannelsTab = stats.channels > 0;
+
+        const html = `
+            <div class="card-body">
+                <div class="m3u-content">
+                    <div class="m3u-header mb-3">
+                        <div class="d-flex justify-content-between align-items-center flex-wrap">
+                            <h5 class="mb-2"><i class="fas fa-list me-2"></i>Conteúdo da Lista M3U</h5>
+                            <div class="m3u-actions">
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="checkbox" id="selectAllItems">
+                                    <label class="form-check-label" for="selectAllItems">Selecionar Todos</label>
+                                </div>
+                                <button class="btn btn-success btn-sm ms-2" id="addSelectedItems" data-bs-toggle="tooltip" title="Adicionar itens selecionados ao Baserow">
+                                    <i class="fas fa-plus"></i> Adicionar Selecionados
+                                </button>
+                                <button class="btn btn-warning btn-sm ms-2" id="clearCacheBtn" data-bs-toggle="tooltip" title="Limpar cache e recarregar conteúdo">
+                                    <i class="fas fa-sync me-2"></i>Limpar Cache
+                                </button>
+                                <button class="btn btn-info btn-sm ms-2" id="testXtreamBtn" data-bs-toggle="tooltip" title="Testar conexão com o servidor Xtream">
+                                    <i class="fas fa-plug me-2"></i>Testar Conexão
+                                </button>
+                            </div>
+                        </div>
+                        <div class="m3u-stats mt-2">
+                            <span class="badge bg-primary me-2">🎬 Filmes: ${stats.movies}</span>
+                            <span class="badge bg-info me-2">📺 Séries: ${stats.series}</span>
+                            ${showChannelsTab ? `<span class="badge bg-warning me-2">📡 Canais: ${stats.channels}</span>` : ''}
+                            <span class="badge bg-success ms-2">📊 Total: ${stats.total}</span>
+                        </div>
+                    </div>
+
+                    ${this.renderBaserowStatus()}
+
+                    <div class="m3u-tabs">
+                        <ul class="nav nav-tabs" id="m3uTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="movies-tab" data-bs-toggle="tab" data-bs-target="#movies" type="button" role="tab">
+                                    <i class="fas fa-film me-1"></i> Filmes (${stats.movies})
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="series-tab" data-bs-toggle="tab" data-bs-target="#series" type="button" role="tab">
+                                    <i class="fas fa-tv me-1"></i> Séries (${stats.series})
+                                </button>
+                            </li>
+                            ${showChannelsTab ? `
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="channels-tab" data-bs-toggle="tab" data-bs-target="#channels" type="button" role="tab">
+                                    <i class="fas fa-broadcast-tower me-1"></i> Canais (${stats.channels})
+                                </button>
+                            </li>
+                            ` : ''}
+                        </ul>
+                        <div class="tab-content" id="m3uTabContent">
+                            <div class="tab-pane fade show active" id="movies" role="tabpanel">
+                                ${this.renderMovies()}
+                                ${stats.movies > this.batchSize ? `<button class="btn btn-outline-primary w-100 mt-3" id="loadMoreMovies">Carregar Mais Filmes</button>` : ''}
+                            </div>
+                            <div class="tab-pane fade" id="series" role="tabpanel">
+                                ${this.renderSeries()}
+                                ${stats.series > this.batchSize ? `<button class="btn btn-outline-primary w-100 mt-3" id="loadMoreSeries">Carregar Mais Séries</button>` : ''}
+                            </div>
+                            ${showChannelsTab ? `
+                            <div class="tab-pane fade" id="channels" role="tabpanel">
+                                ${this.renderChannels()}
+                                ${stats.channels > this.batchSize ? `<button class="btn btn-outline-primary w-100 mt-3" id="loadMoreChannels">Carregar Mais Canais</button>` : ''}
+                            </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        container.innerHTML = html;
+        console.log('[M3U] HTML renderizado (primeiros 1000 caracteres):', html.substring(0, 1000));
+        
+        // Forçar visibilidade do container
+        container.style.display = 'block';
+        container.style.visibility = 'visible';
+        container.style.opacity = '1';
+        container.scrollIntoView({ behavior: 'smooth' });
+
+        // Inicializar tooltips do Bootstrap
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.forEach(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+    }
+
+    renderBaserowStatus() {
+        const hasTable = this.baserowManager.currentTable;
+        const tableName = hasTable ? this.baserowManager.currentTable.name : null;
+        
+        if (!hasTable) {
+            return `
+                <div class="alert alert-info">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <div>
+                            <strong>💡 Dica:</strong> Selecione uma tabela no Baserow para importar os dados M3U
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        const isCompatible = this.baserowManager.ui.isTableM3UCompatible({ name: tableName });
+        return `
+            <div class="alert alert-${isCompatible ? 'success' : 'warning'}">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-${isCompatible ? 'check-circle' : 'exclamation-triangle'} me-2"></i>
+                    <div>
+                        <strong>✅ Tabela selecionada:</strong> ${tableName}
+                        <br><small>${isCompatible ? 'Pronto para importar dados M3U!' : 'Esta tabela pode não ser totalmente compatível com M3U.'}</small>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    renderMovies() {
+        if (this.processedContent.movies.length === 0) {
+            return '<div class="text-center py-4 text-muted">Nenhum filme encontrado</div>';
+        }
+
+        const groupedMovies = this.groupBy(this.processedContent.movies.slice(0, this.batchSize), 'category');
+        this.renderedCounts.movies = Math.min(this.batchSize, this.processedContent.movies.length);
+        
+        return Object.entries(groupedMovies).map(([category, movies]) => `
+            <div class="category-section mb-4">
+                <div class="category-header d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="mb-0">
+                        <i class="fas fa-folder me-2"></i>${category}
+                        <span class="badge bg-secondary ms-2">${movies.length}</span>
+                    </h6>
+                    <button class="btn btn-outline-success btn-sm add-all-items" data-category="movies-${category}" data-bs-toggle="tooltip" title="Adicionar todos os filmes desta categoria ao Baserow">
+                        <i class="fas fa-plus"></i> Adicionar Todos
+                    </button>
+                </div>
+                <div class="row">
+                    ${movies.map(movie => this.renderItem(movie, 'movie')).join('')}
+                </div>
+            </div>
+        `).join('');
+    }
+
+    renderSeries() {
+        if (Object.keys(this.processedContent.series).length === 0) {
+            return '<div class="text-center py-4 text-muted">Nenhuma série encontrada</div>';
+        }
+
+        const seriesKeys = Object.keys(this.processedContent.series).slice(0, this.batchSize);
+        this.renderedCounts.series = Math.min(this.batchSize, seriesKeys.length);
+        
+        return seriesKeys.map(seriesName => {
+            const series = this.processedContent.series[seriesName];
+            return `
+                <div class="series-section mb-4">
+                    <div class="series-header d-flex justify-content-between align-items-center mb-3 p-3 bg-light rounded">
+                        <div class="series-info d-flex align-items-center">
+                            ${series.logo ? `<img src="${series.logo}" alt="${seriesName}" class="series-logo me-3" style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px;" onerror="this.style.display='none'">` : ''}
+                            <div>
+                                <h6 class="mb-0">${seriesName}</h6>
+                                <small class="text-muted">${series.episodes.length} episódios</small>
+                            </div>
+                        </div>
+                        <div class="series-actions">
+                            <button class="btn btn-outline-success btn-sm add-all-items me-2" data-category="series-${seriesName}" data-bs-toggle="tooltip" title="Adicionar todos os episódios desta série ao Baserow">
+                                <i class="fas fa-plus"></i> Adicionar Série
+                            </button>
+                            <button class="btn btn-outline-primary btn-sm series-toggle" data-series-name="${seriesName}" data-bs-toggle="tooltip" title="Mostrar/esconder episódios">
+                                <i class="fas fa-chevron-down"></i> Episódios
+                            </button>
+                        </div>
+                    </div>
+                    <div class="series-episodes collapse" id="episodes-${this.sanitizeId(seriesName)}">
+                        <div class="row">
+                            ${series.episodes.slice(0, this.batchSize).map(episode => this.renderItem(episode, 'episode')).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    renderChannels() {
+        if (this.processedContent.channels.length === 0) {
+            return '<div class="text-center py-4 text-muted">Nenhum canal encontrado</div>';
+        }
+
+        const groupedChannels = this.groupBy(this.processedContent.channels.slice(0, this.batchSize), 'category');
+        this.renderedCounts.channels = Math.min(this.batchSize, this.processedContent.channels.length);
+        
+        return Object.entries(groupedChannels).map(([category, channels]) => `
+            <div class="category-section mb-4">
+                <div class="category-header d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="mb-0">
+                        <i class="fas fa-broadcast-tower me-2"></i>${category}
+                        <span class="badge bg-secondary ms-2">${channels.length}</span>
+                    </h6>
+                    <button class="btn btn-outline-success btn-sm add-all-items" data-category="channels-${category}" data-bs-toggle="tooltip" title="Adicionar todos os canais desta categoria ao Baserow">
+                        <i class="fas fa-plus"></i> Adicionar Todos
+                    </button>
+                </div>
+                <div class="row">
+                    ${channels.map(channel => this.renderItem(channel, 'channel')).join('')}
+                </div>
+            </div>
+        `).join('');
+    }
+
+    renderItem(item, type) {
+        const title = type === 'episode' ? 
+            `${item.episodeName || item.name} (S${item.season || '?'}E${item.episode || '?'})` : 
+            item.name;
+
+        const safeTitle = this.escapeHtml(title);
+
+        return `
+            <div class="col-md-6 col-lg-4 mb-3">
+                <div class="card h-100 m3u-item-card">
+                    <div class="card-body p-3">
+                        <div class="d-flex align-items-start">
+                            <div class="form-check me-2 mt-1">
+                                <input class="form-check-input item-checkbox" type="checkbox" value="${item.id}" id="item-${item.id}">
+                            </div>
+                            ${item.logo ? 
+                                `<img src="${item.logo}" alt="${safeTitle}" class="item-logo me-3" style="width: 60px; height: 60px; object-fit: cover; border-radius: 6px;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                 <div class="item-logo-placeholder me-3" style="display: none; width: 60px; height: 60px; background: #f0f0f0; border-radius: 6px;"></div>` : 
+                                '<div class="item-logo-placeholder me-3" style="width: 60px; height: 60px; background: #f0f0f0; border-radius: 6px;"></div>'
+                            }
+                            <div class="item-info flex-grow-1">
+                                <h6 class="card-title mb-1" title="${safeTitle}">${this.truncateText(safeTitle, 40)}</h6>
+                                <p class="card-text small text-muted mb-2">
+                                    ${item.group ? `<span class="badge bg-light text-dark me-1">${this.escapeHtml(item.group)}</span>` : ''}
+                                    ${type === 'episode' ? `<span class="badge bg-info">S${item.season || '?'}E${item.episode || '?'}</span>` : ''}
+                                </p>
+                                <div class="item-actions">
+                                    <button class="btn btn-success btn-sm add-single-item" data-item-id="${item.id}" title="Adicionar ao Baserow" data-bs-toggle="tooltip">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                    <button class="btn btn-outline-primary btn-sm ms-1" onclick="window.open('${item.url}', '_blank')" title="Visualizar" data-bs-toggle="tooltip">
+                                        <i class="fas fa-play"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    async loadMoreItems(category) {
+        const tabContent = document.getElementById(category);
+        if (!tabContent) return;
+
+        let itemsToRender = [];
+        let html = '';
+
+        switch (category) {
+            case 'movies':
+                this.renderedCounts.movies += this.batchSize;
+                itemsToRender = this.processedContent.movies.slice(this.renderedCounts.movies - this.batchSize, this.renderedCounts.movies);
+                const groupedMovies = this.groupBy(itemsToRender, 'category');
+                html = Object.entries(groupedMovies).map(([cat, movies]) => `
+                    <div class="category-section mb-4">
+                        <div class="category-header d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="mb-0">
+                                <i class="fas fa-folder me-2"></i>${cat}
+                                <span class="badge bg-secondary ms-2">${movies.length}</span>
+                            </h6>
+                            <button class="btn btn-outline-success btn-sm add-all-items" data-category="movies-${cat}" data-bs-toggle="tooltip" title="Adicionar todos os filmes desta categoria ao Baserow">
+                                <i class="fas fa-plus"></i> Adicionar Todos
+                            </button>
+                        </div>
+                        <div class="row">
+                            ${movies.map(movie => this.renderItem(movie, 'movie')).join('')}
+                        </div>
+                    </div>
+                `).join('');
+                break;
+            case 'series':
+                this.renderedCounts.series += this.batchSize;
+                const seriesKeys = Object.keys(this.processedContent.series).slice(this.renderedCounts.series - this.batchSize, this.renderedCounts.series);
+                html = seriesKeys.map(seriesName => {
+                    const series = this.processedContent.series[seriesName];
+                    return `
+                        <div class="series-section mb-4">
+                            <div class="series-header d-flex justify-content-between align-items-center mb-3 p-3 bg-light rounded">
+                                <div class="series-info d-flex align-items-center">
+                                    ${series.logo ? `<img src="${series.logo}" alt="${seriesName}" class="series-logo me-3" style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px;" onerror="this.style.display='none'">` : ''}
+                                    <div>
+                                        <h6 class="mb-0">${seriesName}</h6>
+                                        <small class="text-muted">${series.episodes.length} episódios</small>
+                                    </div>
+                                </div>
+                                <div class="series-actions">
+                                    <button class="btn btn-outline-success btn-sm add-all-items me-2" data-category="series-${seriesName}" data-bs-toggle="tooltip" title="Adicionar todos os episódios desta série ao Baserow">
+                                        <i class="fas fa-plus"></i> Adicionar Série
+                                    </button>
+                                    <button class="btn btn-outline-primary btn-sm series-toggle" data-series-name="${seriesName}" data-bs-toggle="tooltip" title="Mostrar/esconder episódios">
+                                        <i class="fas fa-chevron-down"></i> Episódios
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="series-episodes collapse" id="episodes-${this.sanitizeId(seriesName)}">
+                                <div class="row">
+                                    ${series.episodes.slice(0, this.batchSize).map(episode => this.renderItem(episode, 'episode')).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                break;
+            case 'channels':
+                this.renderedCounts.channels += this.batchSize;
+                itemsToRender = this.processedContent.channels.slice(this.renderedCounts.channels - this.batchSize, this.renderedCounts.channels);
+                const groupedChannels = this.groupBy(itemsToRender, 'category');
+                html = Object.entries(groupedChannels).map(([cat, channels]) => `
+                    <div class="category-section mb-4">
+                        <div class="category-header d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="mb-0">
+                                <i class="fas fa-broadcast-tower me-2"></i>${cat}
+                                <span class="badge bg-secondary ms-2">${channels.length}</span>
+                            </h6>
+                            <button class="btn btn-outline-success btn-sm add-all-items" data-category="channels-${cat}" data-bs-toggle="tooltip" title="Adicionar todos os canais desta categoria ao Baserow">
+                                <i class="fas fa-plus"></i> Adicionar Todos
+                            </button>
+                        </div>
+                        <div class="row">
+                            ${channels.map(channel => this.renderItem(channel, 'channel')).join('')}
+                        </div>
+                    </div>
+                `).join('');
+                break;
+        }
+
+        const loadMoreButton = tabContent.querySelector(`#loadMore${category.charAt(0).toUpperCase() + category.slice(1)}`);
+        if (loadMoreButton) {
+            loadMoreButton.insertAdjacentHTML('beforebegin', html);
+            if (this.renderedCounts[category] >= (category === 'series' ? Object.keys(this.processedContent.series).length : this.processedContent[category].length)) {
+                loadMoreButton.remove();
+            }
+        }
+
+        // Re-inicializar tooltips para novos elementos
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.forEach(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+    }
+
+    async addSingleItem(itemId) {
+        const item = this.findItemById(itemId);
+        if (!item) {
+            this.showAlert('❌ Item não encontrado', 'error');
+            return;
+        }
+
+        const itemType = this.getItemTypeForMapping(item);
+        const isEpisode = itemType === 'episode';
+        
+        const tables = this.baserowManager.api.config.tables;
+        const tableId = isEpisode ? tables.episodios.id : tables.conteudos.id;
+        const tableName = isEpisode ? tables.episodios.name : tables.conteudos.name;
+
+        if (!tableId) {
+            this.showAlert(`⚠️ Tabela para "${itemType}" não encontrada na configuração.`, 'danger');
+            return;
+        }
+
+        try {
+            this.setLoading(true, `add-single-item-${itemId}`);
+            this.showAlert(`⬆️ Adicionando "${item.name}" à tabela "${tableName}"...`, 'info');
+            
+            const formattedData = this.formatItemForBaserow(item, itemType);
+            
+            await this.baserowManager.api.createRecord(tableId, formattedData);
+            
+            this.showAlert(`✅ "${item.name}" adicionado com sucesso!`, 'success');
+            
+            const checkbox = document.getElementById(`item-${itemId}`);
+            if (checkbox) {
+                checkbox.checked = false;
+                checkbox.disabled = true;
+                checkbox.parentElement.parentElement.parentElement.style.opacity = '0.6';
+            }
+            
+        } catch (error) {
+            console.error('[M3U] Erro ao adicionar item:', error);
+            this.showAlert(`❌ Erro ao adicionar "${item.name}": ${this.getErrorMessage(error)}`, 'danger');
+        } finally {
+            this.setLoading(false, `add-single-item-${itemId}`);
+        }
+    }
+
+    async addAllItems(category) {
+        const tables = this.baserowManager.api.config.tables;
+        const moviesTableId = tables.conteudos.id;
+        const episodesTableId = tables.episodios.id;
+
+        if (!moviesTableId || !episodesTableId) {
+            this.showAlert('⚠️ IDs das tabelas de conteúdos ou episódios não encontrados na configuração.', 'danger');
+            return;
+        }
+
+        let items = [];
+        let isSeries = false;
+        let seriesName = '';
+
+        if (category.startsWith('movies-')) {
+            const catName = category.replace('movies-', '');
+            items = this.processedContent.movies.filter(item => (item.category || 'Outros') === catName);
+        } else if (category.startsWith('series-')) {
+            seriesName = category.replace('series-', '');
+            const series = this.processedContent.series[seriesName];
+            if (series) {
+                items = series.episodes;
+                isSeries = true;
+            }
+        }
+
+        if (items.length === 0) {
+            this.showAlert('⚠️ Nenhum item encontrado para adicionar', 'warning');
+            return;
+        }
+
+        const confirm = window.confirm(`Deseja adicionar ${items.length} itens ao Baserow?`);
+        if (!confirm) return;
+
+        try {
+            this.setLoading(true);
+            let successCount = 0;
+            let errorCount = 0;
+
+            this.showAlert(`🚀 Iniciando adição em massa de ${items.length} itens...`, 'info');
+
+            if (isSeries) {
+                const seriesHeaderData = this.fieldMapper.mapSeriesHeader(this.processedContent.series[seriesName]);
+                for (const seasonData of seriesHeaderData) {
+                    try {
+                        await this.baserowManager.api.createRecord(moviesTableId, seasonData);
+                        this.showAlert(`✅ Entrada para "${seriesName}" (Temporada ${seasonData.Temporadas}) adicionada.`, 'success');
+                    } catch (error) {
+                        console.error(`[M3U] Erro ao adicionar cabeçalho da série "${seriesName}":`, error);
+                        this.showAlert(`❌ Erro ao adicionar entrada para "${seriesName}": ${this.getErrorMessage(error)}`, 'danger');
+                    }
+                }
+            }
+
+            for (const item of items) {
+                try {
+                    const itemType = isSeries ? 'episode' : 'movie';
+                    const tableId = isSeries ? episodesTableId : moviesTableId;
+                    const formattedData = this.formatItemForBaserow(item, itemType);
+                    await this.baserowManager.api.createRecord(tableId, formattedData);
+                    successCount++;
+                    
+                    const checkbox = document.getElementById(`item-${item.id}`);
+                    if (checkbox) {
+                        checkbox.checked = false;
+                        checkbox.disabled = true;
+                        checkbox.parentElement.parentElement.parentElement.style.opacity = '0.6';
+                    }
+                } catch (error) {
+                    console.error('[M3U] Erro ao adicionar item:', item.name, error);
+                    errorCount++;
+                }
+            }
+
+            const message = successCount > 0 ?
+                `🎉 ${successCount} itens adicionados com sucesso!` + (errorCount > 0 ? ` (❌ ${errorCount} falharam)` : '') :
+                `❌ Falha ao adicionar itens.`;
+            
+            this.showAlert(message, successCount > 0 ? 'success' : 'danger');
+            
+        } catch (error) {
+            console.error('[M3U] Erro na adição em massa:', error);
+            this.showAlert('❌ Erro na adição em massa: ' + this.getErrorMessage(error), 'danger');
+        } finally {
+            this.setLoading(false);
+        }
+    }
+
+    async addSelectedItems() {
+        const selectedCheckboxes = document.querySelectorAll('.item-checkbox:checked');
+        if (selectedCheckboxes.length === 0) {
+            this.showAlert('⚠️ Selecione pelo menos um item', 'warning');
+            return;
+        }
+        
+        const tables = this.baserowManager.api.config.tables;
+        const moviesTableId = tables.conteudos.id;
+        const episodesTableId = tables.episodios.id;
+
+        if (!moviesTableId || !episodesTableId) {
+            this.showAlert('⚠️ IDs das tabelas de conteúdos ou episódios não encontrados na configuração.', 'danger');
+            return;
+        }
+
+        const confirm = window.confirm(`Deseja adicionar ${selectedCheckboxes.length} itens selecionados ao Baserow?`);
+        if (!confirm) return;
+
+        try {
+            this.setLoading(true);
+            let successCount = 0;
+            let errorCount = 0;
+
+            this.showAlert(`🚀 Adicionando ${selectedCheckboxes.length} itens selecionados...`, 'info');
+
+            for (const checkbox of selectedCheckboxes) {
+                try {
+                    const item = this.findItemById(checkbox.value);
+                    if (item) {
+                        const itemType = this.getItemTypeForMapping(item);
+                        const isEpisode = itemType === 'episode';
+                        const tableId = isEpisode ? episodesTableId : moviesTableId;
+
+                        const formattedData = this.formatItemForBaserow(item, itemType);
+                        await this.baserowManager.api.createRecord(tableId, formattedData);
+                        successCount++;
+                        
+                        checkbox.checked = false;
+                        checkbox.disabled = true;
+                        checkbox.parentElement.parentElement.parentElement.style.opacity = '0.6';
+                    }
+                } catch (error) {
+                    console.error('[M3U] Erro ao adicionar item:', error);
+                    errorCount++;
+                }
+            }
+
+            const message = successCount > 0 ?
+                `🎉 ${successCount} itens adicionados com sucesso!` + (errorCount > 0 ? ` (❌ ${errorCount} falharam)` : '') :
+                `❌ Falha ao adicionar itens selecionados.`;
+            
+            this.showAlert(message, successCount > 0 ? 'success' : 'danger');
+
+            document.getElementById('selectAllItems').checked = false;
+            
+        } catch (error) {
+            console.error('[M3U] Erro na adição de itens selecionados:', error);
+            this.showAlert('❌ Erro na adição de itens selecionados: ' + this.getErrorMessage(error), 'danger');
+        } finally {
+            this.setLoading(false);
+        }
+    }
+
+    formatItemForBaserow(item) {
+        const itemType = this.getItemTypeForMapping(item);
+        const tableFields = this.baserowManager.ui?.tableFields || [];
+        const tableName = this.baserowManager.currentTable?.name || '';
+        
+        return this.fieldMapper.mapItemToBaserow(item, tableFields, tableName, itemType);
+    }
+
+    getItemTypeForMapping(item) {
+        if (item.season && item.episode) return 'episode';
+        if (item.seriesName) return 'episode';
+        return 'movie';
+    }
+
+    findItemById(id) {
+        for (const movie of this.processedContent.movies) {
+            if (movie.id === id) return movie;
+        }
+        
+        for (const series of Object.values(this.processedContent.series)) {
+            for (const episode of series.episodes) {
+                if (episode.id === id) return episode;
+            }
+        }
+        
+        for (const channel of this.processedContent.channels) {
+            if (channel.id === id) return channel;
+        }
+        
+        return null;
+    }
+
+    toggleSeries(seriesName) {
+        const episodesContainer = document.getElementById(`episodes-${this.sanitizeId(seriesName)}`);
+        const toggleBtn = document.querySelector(`[data-series-name="${seriesName}"]`);
+        
+        if (episodesContainer && toggleBtn) {
+            const isVisible = episodesContainer.classList.contains('show');
+            
+            if (isVisible) {
+                episodesContainer.classList.remove('show');
+                toggleBtn.innerHTML = '<i class="fas fa-chevron-down"></i> Episódios';
+            } else {
+                episodesContainer.classList.add('show');
+                toggleBtn.innerHTML = '<i class="fas fa-chevron-up"></i> Ocultar';
+            }
+        }
+    }
+
+    toggleSelectAll() {
+        const selectAllCheckbox = document.getElementById('selectAllItems');
+        const itemCheckboxes = document.querySelectorAll('.item-checkbox:not(:disabled)');
+        
+        itemCheckboxes.forEach(checkbox => {
+            checkbox.checked = selectAllCheckbox.checked;
+        });
+    }
+
+    handleItemSelection(checkbox) {
+        const selectAllCheckbox = document.getElementById('selectAllItems');
+        const itemCheckboxes = document.querySelectorAll('.item-checkbox:not(:disabled)');
+        const checkedBoxes = document.querySelectorAll('.item-checkbox:checked');
+        
+        if (selectAllCheckbox) {
+            selectAllCheckbox.checked = checkedBoxes.length === itemCheckboxes.length;
+            selectAllCheckbox.indeterminate = checkedBoxes.length > 0 && checkedBoxes.length < itemCheckboxes.length;
+        }
+    }
+
+    generateId() {
+        return Date.now().toString(36) + Math.random().toString(36).substr(2);
+    }
+
+    sanitizeId(str) {
+        return str.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
+    }
+
+    groupBy(array, key) {
+        return array.reduce((groups, item) => {
+            const group = item[key] || 'Sem categoria';
+            groups[group] = groups[group] || [];
+            groups[group].push(item);
+            return groups;
+        }, {});
+    }
+
+    truncateText(text, maxLength) {
+        if (!text) return '';
+        return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+    }
+
+    escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    getTotalItemsStats() {
+        return {
+            movies: this.processedContent.movies.length,
+            series: Object.keys(this.processedContent.series).length,
+            channels: this.processedContent.channels.length,
+            total: this.processedContent.movies.length + 
+                   Object.values(this.processedContent.series).reduce((sum, series) => sum + series.episodes.length, 0) + 
+                   this.processedContent.channels.length
+        };
+    }
+
+    setLoading(loading, buttonId = null) {
+        this.isLoading = loading;
+        const buttons = buttonId ? [buttonId] : ['loadXtreamBtn', 'testXtreamBtn'];
+        
+        buttons.forEach(id => {
+            const btn = document.getElementById(id) || document.querySelector(`[data-item-id="${id.replace('add-single-item-', '')}"]`);
+            if (btn) {
+                btn.disabled = loading;
+                if (loading) {
+                    btn.dataset.originalText = btn.innerHTML;
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Carregando...';
+                } else {
+                    btn.innerHTML = btn.dataset.originalText || btn.innerHTML;
+                }
+            }
+        });
+
+        const loadingIndicator = document.getElementById('m3uLoading');
+        if (loadingIndicator) {
+            loadingIndicator.style.display = loading ? 'block' : 'none';
+        }
+
+        const otherButtons = document.querySelectorAll('.add-single-item, .add-all-items, #addSelectedItems');
+        otherButtons.forEach(btn => {
+            btn.disabled = loading;
+        });
+    }
+
+    showAlert(message, type = 'info') {
+        if (this.baserowManager && this.baserowManager.ui) {
+            this.baserowManager.ui.showAlert(message, type);
+        } else {
+            console.log(`[M3U] ${type.toUpperCase()}: ${message}`);
+            
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+            alertDiv.innerHTML = `
+                ${message.replace(/\n/g, '<br>')}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            const container = document.querySelector('.main-content') || document.body;
+            container.insertBefore(alertDiv, container.firstChild);
+            
+            setTimeout(() => alertDiv.remove(), 5000);
+        }
+    }
+}
+
+export default M3UManager;

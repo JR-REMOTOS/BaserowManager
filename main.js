@@ -1,0 +1,725 @@
+import UIManager from './ui.js';
+import BaserowAPI from './api.js';
+import M3UManager from './m3u-manager.js';
+import { BASEROW_CONFIGS, TABLE_ICONS } from './config.js';
+import Utils, { ValidationUtils, FormatUtils, DOMUtils, DataUtils } from './utils.js';
+
+/**
+ * Classe principal da aplicação
+ */
+class BaserowManager {
+    constructor() {
+        this.ui = new UIManager();
+        this.api = this.ui.api; // Usar a mesma instância da API
+        this.currentTable = null;
+        this.editingRowId = null;
+        this.isInitialized = false;
+        this.m3uManager = null; // Será inicializado após o DOM estar pronto
+        this.currentView = 'baserow'; // 'baserow' ou 'm3u'
+    }
+
+    /**
+     * Inicializar aplicação
+     */
+    async init() {
+        if (this.isInitialized) return;
+
+        try {
+            console.log('[App] Inicializando aplicação...');
+            
+            // Aguardar DOM estar pronto
+            if (document.readyState === 'loading') {
+                await new Promise(resolve => document.addEventListener('DOMContentLoaded', resolve));
+            }
+
+            // Inicializar interface
+            this.ui.init();
+            
+            // Inicializar M3U Manager
+            this.m3uManager = new M3UManager(this);
+            
+            // Configurar handlers globais
+            this.setupGlobalHandlers();
+            
+            // Disponibilizar globalmente para uso nos event handlers inline
+            window.app = this;
+            
+            // Configurar navegação entre views
+            this.setupViewNavigation();
+            
+            this.isInitialized = true;
+            console.log('[App] Aplicação inicializada com sucesso');
+            
+        } catch (error) {
+            console.error('[App] Erro na inicialização:', error);
+            this.ui.showAlert('Erro ao inicializar aplicação: ' + error.message, 'danger');
+        }
+    }
+
+    /**
+     * Configurar navegação entre views
+     */
+    setupViewNavigation() {
+        // Detectar quando M3U é carregado para mostrar conteúdo
+        const originalRenderContent = this.m3uManager.renderContent.bind(this.m3uManager);
+        this.m3uManager.renderContent = () => {
+            originalRenderContent();
+            this.switchToM3UView();
+        };
+
+        // Quando uma tabela é selecionada, voltar para view do Baserow
+        const originalSelectTable = this.ui.selectTable.bind(this.ui);
+        this.ui.selectTable = async (tableId, tableName) => {
+            await originalSelectTable(tableId, tableName);
+            this.switchToBaserowView();
+        };
+    }
+
+    /**
+     * Alternar para view do M3U
+     */
+    switchToM3UView() {
+        this.currentView = 'm3u';
+        
+        // Ocultar elementos do Baserow
+        const elementsToHide = [
+            'tableHeader',
+            'recordForm', 
+            'dataContainer',
+            'emptyState',
+            'loading'
+        ];
+        
+        elementsToHide.forEach(id => {
+            const element = document.getElementById(id);
+            if (element) element.style.display = 'none';
+        });
+        
+        // Mostrar conteúdo M3U
+        const m3uContent = document.getElementById('m3uContent');
+        if (m3uContent) {
+            m3uContent.style.display = 'block';
+        }
+        
+        // Destacar seção M3U na sidebar
+        const m3uSection = document.getElementById('m3uSection');
+        if (m3uSection) {
+            m3uSection.classList.add('active');
+        }
+        
+        // Remover destaque das tabelas
+        document.querySelectorAll('.table-item').forEach(item => {
+            item.classList.remove('active');
+        });
+    }
+
+    /**
+     * Alternar para view do Baserow
+     */
+    switchToBaserowView() {
+        this.currentView = 'baserow';
+        
+        // Ocultar conteúdo M3U
+        const m3uContent = document.getElementById('m3uContent');
+        if (m3uContent) {
+            m3uContent.style.display = 'none';
+        }
+        
+        // Remover destaque da seção M3U
+        const m3uSection = document.getElementById('m3uSection');
+        if (m3uSection) {
+            m3uSection.classList.remove('active');
+        }
+    }
+
+    /**
+     * Configurar handlers globais
+     */
+    setupGlobalHandlers() {
+        // Handler para erros não capturados
+        window.addEventListener('unhandledrejection', (event) => {
+            console.error('[App] Promise rejeitada:', event.reason);
+            this.ui.showAlert('Erro inesperado: ' + event.reason?.message || 'Erro desconhecido', 'warning');
+            event.preventDefault();
+        });
+
+        // Handler para erros JavaScript
+        window.addEventListener('error', (event) => {
+            console.error('[App] Erro JavaScript:', event.error);
+        });
+
+        // Configurar tooltips do Bootstrap
+        this.initBootstrapComponents();
+
+        // Handler para clique na seção M3U
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('#m3uSection') && !e.target.closest('input, button')) {
+                this.focusOnM3U();
+            }
+        });
+
+        // Handler para o botão de sair
+        const logoutButton = document.getElementById('logoutButton');
+        if (logoutButton) {
+            logoutButton.addEventListener('click', () => {
+                localStorage.removeItem('authToken');
+                window.location.href = 'login.html';
+            });
+        }
+    }
+
+    /**
+     * Focar na seção M3U
+     */
+    focusOnM3U() {
+        const m3uUrl = document.getElementById('m3uUrl');
+        if (m3uUrl) {
+            m3uUrl.focus();
+        }
+        
+        // Se já tem conteúdo M3U carregado, mostrar
+        if (this.m3uManager && this.m3uManager.currentPlaylist) {
+            this.switchToM3UView();
+        }
+    }
+
+    /**
+     * Inicializar componentes do Bootstrap
+     */
+    initBootstrapComponents() {
+        // Tooltips
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+
+        // Popovers
+        const popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
+        popoverTriggerList.map(function (popoverTriggerEl) {
+            return new bootstrap.Popover(popoverTriggerEl);
+        });
+    }
+
+    /**
+     * Selecionar tabela (exposta globalmente)
+     */
+    async selectTable(tableId, tableName) {
+        try {
+            await this.ui.selectTable(tableId, tableName);
+            this.currentTable = { id: tableId, name: tableName };
+        } catch (error) {
+            console.error('[App] Erro ao selecionar tabela:', error);
+            this.ui.showAlert('Erro ao selecionar tabela: ' + error.message, 'danger');
+        }
+    }
+
+    /**
+     * Mostrar formulário de adição
+     */
+    showAddForm() {
+        if (!this.currentTable) {
+            this.ui.showAlert('Selecione uma tabela primeiro', 'warning');
+            return;
+        }
+
+        this.editingRowId = null;
+        this.renderRecordForm('Adicionar Novo Registro', 'fas fa-plus-circle');
+        this.switchToBaserowView(); // Garantir que estamos na view do Baserow
+    }
+
+    /**
+     * Editar registro
+     */
+    async editRecord(rowId) {
+        if (!this.currentTable) {
+            this.ui.showAlert('Nenhuma tabela selecionada', 'warning');
+            return;
+        }
+
+        try {
+            this.ui.showLoading();
+            const record = await this.api.getRecord(this.currentTable.id, rowId);
+            this.editingRowId = rowId;
+            this.renderRecordForm('Editar Registro', 'fas fa-edit', record);
+            this.switchToBaserowView(); // Garantir que estamos na view do Baserow
+            this.ui.hideLoading();
+        } catch (error) {
+            this.ui.hideLoading();
+            console.error('[App] Erro ao carregar registro:', error);
+            this.ui.showAlert('Erro ao carregar registro: ' + error.message, 'danger');
+        }
+    }
+
+    /**
+     * Renderizar formulário de registro
+     */
+    renderRecordForm(title, icon, data = {}) {
+        const formTitle = document.getElementById('formTitle');
+        const formFields = document.getElementById('formFields');
+        const recordForm = document.getElementById('recordForm');
+
+        if (!formTitle || !formFields || !recordForm) {
+            console.error('[App] Elementos do formulário não encontrados');
+            return;
+        }
+
+        // Atualizar título
+        formTitle.innerHTML = `<i class="${icon} me-2"></i>${title}`;
+
+        // Renderizar campos
+        formFields.innerHTML = this.ui.tableFields
+            .filter(field => field.name !== 'id' && !field.read_only)
+            .map(field => this.renderFormField(field, data[field.name]))
+            .join('');
+
+        // Mostrar formulário
+        recordForm.style.display = 'block';
+        recordForm.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    /**
+     * Renderizar campo do formulário
+     */
+    renderFormField(field, value = '') {
+        const fieldName = field.name;
+        const fieldId = `field_${fieldName.replace(/\s+/g, '_')}`;
+        let input;
+
+        // Determinar tipo de input baseado no nome e tipo do campo
+        if (field.type === 'number') {
+            input = `<input type="number" class="form-control" id="${fieldId}" value="${value || 0}" min="0">`;
+        } else if (field.type === 'boolean') {
+            input = `
+                <select class="form-control" id="${fieldId}">
+                    <option value="false" ${value === false ? 'selected' : ''}>Não</option>
+                    <option value="true" ${value === true ? 'selected' : ''}>Sim</option>
+                </select>
+            `;
+        } else if (field.type === 'date') {
+            const dateValue = value ? new Date(value).toISOString().split('T')[0] : '';
+            input = `<input type="date" class="form-control" id="${fieldId}" value="${dateValue}">`;
+        } else if (field.type === 'long_text' || fieldName.toLowerCase().includes('sinopse')) {
+            input = `<textarea class="form-control" id="${fieldId}" rows="3" placeholder="Digite ${fieldName.toLowerCase()}...">${value || ''}</textarea>`;
+        } else if (fieldName.toLowerCase().includes('email')) {
+            input = `<input type="email" class="form-control" id="${fieldId}" value="${value || ''}" placeholder="exemplo@email.com">`;
+        } else if (fieldName.toLowerCase().includes('link') || fieldName.toLowerCase().includes('url')) {
+            input = `<input type="url" class="form-control" id="${fieldId}" value="${value || ''}" placeholder="https://exemplo.com">`;
+        } else if (fieldName.toLowerCase().includes('senha') || fieldName.toLowerCase().includes('password')) {
+            input = `<input type="password" class="form-control" id="${fieldId}" value="${value || ''}" placeholder="Digite a senha">`;
+        } else {
+            input = `<input type="text" class="form-control" id="${fieldId}" value="${value || ''}" placeholder="Digite ${fieldName.toLowerCase()}...">`;
+        }
+
+        // Adicionar validação visual
+        const isRequired = field.primary || fieldName.toLowerCase().includes('nome') || fieldName.toLowerCase().includes('email');
+        const requiredMark = isRequired ? '<span class="text-danger">*</span>' : '';
+
+        return `
+            <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold" for="${fieldId}">
+                    ${fieldName} ${requiredMark}
+                </label>
+                ${input}
+                <div class="invalid-feedback" id="${fieldId}_error"></div>
+            </div>
+        `;
+    }
+
+    /**
+     * Salvar registro
+     */
+    async saveRecord() {
+        if (!this.currentTable) {
+            this.ui.showAlert('Nenhuma tabela selecionada', 'warning');
+            return;
+        }
+
+        try {
+            // Coletar dados do formulário
+            const formData = this.collectFormData();
+            
+            // Validar dados
+            const validation = this.validateFormData(formData);
+            if (!validation.valid) {
+                this.showValidationErrors(validation.errors);
+                return;
+            }
+
+            // Mostrar loading
+            this.ui.showLoading();
+
+            let result;
+            if (this.editingRowId) {
+                // Atualizar registro existente
+                result = await this.api.updateRecord(this.currentTable.id, this.editingRowId, formData);
+                this.ui.showAlert('Registro atualizado com sucesso!', 'success');
+            } else {
+                // Criar novo registro
+                result = await this.api.createRecord(this.currentTable.id, formData);
+                this.ui.showAlert('Registro criado com sucesso!', 'success');
+            }
+
+            // Ocultar formulário e recarregar dados
+            this.hideRecordForm();
+            await this.ui.fetchRecords(this.ui.currentPage);
+            this.ui.hideLoading();
+
+        } catch (error) {
+            this.ui.hideLoading();
+            console.error('[App] Erro ao salvar registro:', error);
+            this.ui.showAlert('Erro ao salvar registro: ' + error.message, 'danger');
+        }
+    }
+
+    /**
+     * Coletar dados do formulário
+     */
+    collectFormData() {
+        const formData = {};
+        
+        this.ui.tableFields
+            .filter(field => field.name !== 'id' && !field.read_only)
+            .forEach(field => {
+                const fieldId = `field_${field.name.replace(/\s+/g, '_')}`;
+                const element = document.getElementById(fieldId);
+                
+                if (element) {
+                    let value = element.value;
+
+                    // Converter tipos conforme necessário
+                    if (field.type === 'boolean') {
+                        value = value === 'true';
+                    } else if (field.type === 'number' && value) {
+                        value = parseFloat(value);
+                    } else if (field.type === 'date' && value) {
+                        value = new Date(value).toISOString();
+                    }
+
+                    formData[field.name] = value || null;
+                }
+            });
+
+        return formData;
+    }
+
+    /**
+     * Validar dados do formulário
+     */
+    validateFormData(formData) {
+        const errors = {};
+        let valid = true;
+
+        Object.keys(formData).forEach(fieldName => {
+            const value = formData[fieldName];
+            const field = this.ui.tableFields.find(f => f.name === fieldName);
+            
+            if (!field) return;
+
+            // Validações específicas por tipo de campo
+            if (fieldName.toLowerCase().includes('email') && value) {
+                const emailValidation = ValidationUtils.validateField(fieldName, value, 'email');
+                if (!emailValidation.valid) {
+                    errors[fieldName] = emailValidation.message;
+                    valid = false;
+                }
+            }
+
+            if ((fieldName.toLowerCase().includes('link') || fieldName.toLowerCase().includes('url')) && value) {
+                const urlValidation = ValidationUtils.validateField(fieldName, value, 'url');
+                if (!urlValidation.valid) {
+                    errors[fieldName] = urlValidation.message;
+                    valid = false;
+                }
+            }
+
+            // Validação de campos obrigatórios
+            const isRequired = field.primary || fieldName.toLowerCase().includes('nome');
+            if (isRequired && (!value || value.toString().trim() === '')) {
+                errors[fieldName] = 'Este campo é obrigatório';
+                valid = false;
+            }
+        });
+
+        return { valid, errors };
+    }
+
+    /**
+     * Mostrar erros de validação
+     */
+    showValidationErrors(errors) {
+        // Limpar erros anteriores
+        document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+        document.querySelectorAll('.invalid-feedback').forEach(el => el.textContent = '');
+
+        // Mostrar novos erros
+        Object.keys(errors).forEach(fieldName => {
+            const fieldId = `field_${fieldName.replace(/\s+/g, '_')}`;
+            const element = document.getElementById(fieldId);
+            const errorElement = document.getElementById(`${fieldId}_error`);
+
+            if (element) {
+                element.classList.add('is-invalid');
+            }
+            if (errorElement) {
+                errorElement.textContent = errors[fieldName];
+            }
+        });
+
+        this.ui.showAlert('Corrija os erros no formulário antes de continuar', 'warning');
+    }
+
+    /**
+     * Excluir registro
+     */
+    async deleteRecord(rowId) {
+        if (!this.currentTable) {
+            this.ui.showAlert('Nenhuma tabela selecionada', 'warning');
+            return;
+        }
+
+        if (!confirm('Tem certeza que deseja excluir este registro? Esta ação não pode ser desfeita.')) {
+            return;
+        }
+
+        try {
+            this.ui.showLoading();
+            await this.api.deleteRecord(this.currentTable.id, rowId);
+            this.ui.showAlert('Registro excluído com sucesso!', 'success');
+            await this.ui.fetchRecords(this.ui.currentPage);
+            this.ui.hideLoading();
+        } catch (error) {
+            this.ui.hideLoading();
+            console.error('[App] Erro ao excluir registro:', error);
+            this.ui.showAlert('Erro ao excluir registro: ' + error.message, 'danger');
+        }
+    }
+
+    /**
+     * Confirmar exclusão de todos os registros
+     */
+    async confirmDeleteAll() {
+        if (!this.currentTable) {
+            this.ui.showAlert('Nenhuma tabela selecionada', 'warning');
+            return;
+        }
+
+        const confirmation = prompt(
+            `⚠️ ATENÇÃO: Esta ação irá excluir TODOS os ${this.ui.totalRecords} registros da tabela "${this.currentTable.name}".\n\n` +
+            `Esta ação NÃO PODE ser desfeita!\n\n` +
+            `Para confirmar, digite exatamente: EXCLUIR TUDO`
+        );
+
+        if (confirmation !== 'EXCLUIR TUDO') {
+            this.ui.showAlert('Operação cancelada', 'info');
+            return;
+        }
+
+        await this.deleteAllRecords();
+    }
+
+    /**
+     * Excluir todos os registros
+     */
+    async deleteAllRecords() {
+        try {
+            this.ui.showProgress('Excluindo Registros', 'Preparando exclusão...');
+
+            const result = await this.api.deleteAllRecords(
+                this.currentTable.id,
+                (percentage, deleted, total) => {
+                    this.ui.updateProgress(percentage, `Excluído ${deleted} de ${total} registros...`);
+                }
+            );
+
+            this.ui.hideProgress();
+
+            if (result.deleted > 0) {
+                this.ui.showAlert(`✅ ${result.deleted} registros excluídos com sucesso!`, 'success');
+                await this.ui.fetchRecords(1);
+            } else {
+                this.ui.showAlert('Nenhum registro encontrado para exclusão', 'info');
+            }
+
+        } catch (error) {
+            this.ui.hideProgress();
+            console.error('[App] Erro na exclusão em massa:', error);
+            this.ui.showAlert('Erro na exclusão: ' + error.message, 'danger');
+        }
+    }
+
+    /**
+     * Ocultar formulário de registro
+     */
+    hideRecordForm() {
+        const recordForm = document.getElementById('recordForm');
+        if (recordForm) {
+            recordForm.style.display = 'none';
+        }
+        this.editingRowId = null;
+
+        // Limpar erros de validação
+        document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+        document.querySelectorAll('.invalid-feedback').forEach(el => el.textContent = '');
+    }
+
+    /**
+     * Limpar formulário
+     */
+    clearForm() {
+        // Limpar todos os campos do formulário
+        this.ui.tableFields
+            .filter(field => field.name !== 'id' && !field.read_only)
+            .forEach(field => {
+                const fieldId = `field_${field.name.replace(/\s+/g, '_')}`;
+                const element = document.getElementById(fieldId);
+                
+                if (element) {
+                    if (element.type === 'checkbox') {
+                        element.checked = false;
+                    } else if (element.type === 'number') {
+                        element.value = 0;
+                    } else {
+                        element.value = '';
+                    }
+                }
+            });
+
+        // Limpar erros de validação
+        document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+        document.querySelectorAll('.invalid-feedback').forEach(el => el.textContent = '');
+        
+        this.ui.showAlert('Formulário limpo', 'info');
+    }
+
+    /**
+     * Exportar dados
+     */
+    exportData() {
+        if (!this.currentTable || !this.ui.currentRecords.length) {
+            this.ui.showAlert('Nenhum dado para exportar', 'warning');
+            return;
+        }
+
+        try {
+            // Preparar dados para export
+            const headers = this.ui.tableFields.map(field => field.name);
+            const csvContent = [
+                headers.join(','),
+                ...this.ui.currentRecords.map(record => 
+                    headers.map(header => {
+                        const value = record[header];
+                        // Escapar vírgulas e aspas
+                        if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
+                            return `"${value.replace(/"/g, '""')}"`;
+                        }
+                        return value || '';
+                    }).join(',')
+                )
+            ].join('\n');
+
+            // Criar e fazer download do arquivo
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `${this.currentTable.name}_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            this.ui.showAlert('Dados exportados com sucesso!', 'success');
+        } catch (error) {
+            console.error('[App] Erro ao exportar dados:', error);
+            this.ui.showAlert('Erro ao exportar dados: ' + error.message, 'danger');
+        }
+    }
+
+    /**
+     * Atualizar seletor de URL da API
+     */
+    updateApiUrl() {
+        const select = document.getElementById('apiUrlSelect');
+        const input = document.getElementById('apiUrl');
+        
+        if (select && input && select.value !== 'custom') {
+            input.value = select.value;
+        }
+    }
+
+    /**
+     * Alternar visibilidade do token
+     */
+    toggleTokenVisibility() {
+        const tokenInput = document.getElementById('apiToken');
+        const eyeIcon = document.getElementById('tokenEye');
+        
+        if (tokenInput && eyeIcon) {
+            if (tokenInput.type === 'password') {
+                tokenInput.type = 'text';
+                eyeIcon.className = 'fas fa-eye-slash';
+            } else {
+                tokenInput.type = 'password';
+                eyeIcon.className = 'fas fa-eye';
+            }
+        }
+    }
+
+    /**
+     * Abrir documentação do Baserow
+     */
+    openBaserowDocs() {
+        const currentSite = this.api.currentSite;
+        const urls = {
+            oficial: 'https://baserow.io/docs/apis%2Frest-api',
+            vps: '#' // URL da documentação do VPS se disponível
+        };
+        
+        window.open(urls[currentSite] || urls.oficial, '_blank');
+    }
+
+    /**
+     * Ir para página específica
+     */
+    goToPage(page) {
+        if (page === this.ui.currentPage || !this.currentTable) return;
+        this.ui.fetchRecords(page);
+    }
+
+    /**
+     * Atualizar tabela atual
+     */
+    refreshTable() {
+        if (this.currentTable) {
+            this.ui.refreshTable();
+        }
+    }
+
+    /**
+     * Buscar registros
+     */
+    searchRecords() {
+        this.ui.searchRecords();
+    }
+
+    // Aliases para métodos da UI (para compatibilidade)
+    toggleConfig() { return this.ui.toggleConfig(); }
+    testConnection() { return this.ui.testConnection(); }
+    quickTest() { return this.ui.quickTest(); }
+}
+
+// Instância global da aplicação
+const baserowManager = new BaserowManager();
+
+// Inicializar quando DOM estiver pronto
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => baserowManager.init());
+} else {
+    baserowManager.init();
+}
+
+// Exportar para uso em módulos
+export default baserowManager;
+
+// Disponibilizar globalmente para compatibilidade com HTML inline
+window.baserowManager = baserowManager;
