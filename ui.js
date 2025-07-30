@@ -20,9 +20,7 @@ class UIManager {
     // Inicializar interface
     init() {
         this.setupEventListeners();
-        this.renderSiteSelector();
         this.showEmptyState();
-        this.loadSavedConfig();
         this.setupM3UIntegration();
     }
 

@@ -728,6 +728,16 @@ class BaserowManager {
                 if (config.m3u_password) document.getElementById('xtreamPassword').value = config.m3u_password;
 
                 this.ui.showAlert('Configurações do usuário carregadas.', 'info');
+
+                // Se não houver token, abrir o painel de configuração
+                if (!config.baserow_api_token) {
+                    this.ui.showAlert('Bem-vindo! Por favor, configure sua conexão Baserow.', 'info');
+                    this.ui.toggleConfig();
+                }
+            } else {
+                // Se não houver dados de configuração, abrir o painel
+                this.ui.showAlert('Bem-vindo! Por favor, configure sua conexão Baserow.', 'info');
+                this.ui.toggleConfig();
             }
         } catch (error) {
             console.error('[App] Erro ao carregar configurações do usuário:', error);
