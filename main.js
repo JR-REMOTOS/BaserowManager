@@ -47,6 +47,12 @@ class BaserowManager {
             // Configurar navegação entre views
             this.setupViewNavigation();
             
+<<<<<<< HEAD
+=======
+            // Carregar configurações do usuário
+            await this.loadUserConfig();
+
+>>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
             this.isInitialized = true;
             console.log('[App] Aplicação inicializada com sucesso');
             
@@ -702,6 +708,146 @@ class BaserowManager {
         this.ui.searchRecords();
     }
 
+<<<<<<< HEAD
+=======
+    /**
+     * Carregar configurações do usuário
+     */
+    async loadUserConfig() {
+        try {
+            const response = await fetch('load_config.php');
+            const result = await response.json();
+
+            if (result.success && result.data) {
+                const config = result.data;
+                // Preencher campos do Baserow
+                if (config.baserow_api_url) document.getElementById('apiUrl').value = config.baserow_api_url;
+                if (config.baserow_api_token) document.getElementById('apiToken').value = config.baserow_api_token;
+                if (config.conteudos_table_id) document.getElementById('conteudosTableId').value = config.conteudos_table_id;
+                if (config.categorias_table_id) document.getElementById('categoriasTableId').value = config.categorias_table_id;
+                if (config.episodios_table_id) document.getElementById('episodiosTableId').value = config.episodios_table_id;
+                if (config.banners_table_id) document.getElementById('bannersTableId').value = config.banners_table_id;
+                if (config.usuarios_table_id) document.getElementById('usuariosTableId').value = config.usuarios_table_id;
+                if (config.canais_table_id) document.getElementById('canaisTableId').value = config.canais_table_id;
+                if (config.pagamentos_table_id) document.getElementById('pagamentosTableId').value = config.pagamentos_table_id;
+                if (config.planos_table_id) document.getElementById('planosTableId').value = config.planos_table_id;
+                if (config.tv_categoria_table_id) document.getElementById('tvCategoriaTableId').value = config.tv_categoria_table_id;
+
+                // Preencher campos do M3U
+                if (config.m3u_url) document.getElementById('xtreamBaseUrl').value = config.m3u_url;
+                if (config.m3u_username) document.getElementById('xtreamUsername').value = config.m3u_username;
+                if (config.m3u_password) document.getElementById('xtreamPassword').value = config.m3u_password;
+                
+                this.ui.showAlert('Configurações do usuário carregadas.', 'info');
+                
+                const apiConfig = {
+                    apiUrl: config.baserow_api_url,
+                    token: config.baserow_api_token,
+                    conteudosTableId: config.conteudos_table_id,
+                    categoriasTableId: config.categorias_table_id,
+                    episodiosTableId: config.episodios_table_id,
+                    usuariosTableId: config.usuarios_table_id,
+                    bannersTableId: config.banners_table_id,
+                    canaisTableId: config.canais_table_id,
+                    pagamentosTableId: config.pagamentos_table_id,
+                    planosTableId: config.planos_table_id,
+                    tvCategoriaTableId: config.tv_categoria_table_id,
+                    mapping_conteudos: JSON.parse(config.mapping_conteudos || '{}'),
+                    mapping_episodios: JSON.parse(config.mapping_episodios || '{}')
+                };
+                this.api.setConfig(apiConfig);
+
+                // Preencher os dropdowns de mapeamento com os campos corretos
+                if (apiConfig.conteudosTableId) {
+                    const fields = await this.api.loadTableFields(apiConfig.conteudosTableId);
+                    this.ui.populateMappingDropdowns(fields, 'conteudos', apiConfig.mapping_conteudos);
+                }
+                if (apiConfig.episodiosTableId) {
+                    const fields = await this.api.loadTableFields(apiConfig.episodiosTableId);
+                    this.ui.populateMappingDropdowns(fields, 'episodios', apiConfig.mapping_episodios);
+                }
+
+                // Se não houver token, abrir o painel de configuração
+                if (!config.baserow_api_token) {
+                    this.ui.showAlert('Bem-vindo! Por favor, configure sua conexão Baserow.', 'info');
+                    this.ui.toggleConfig();
+                }
+            } else {
+                // Se não houver dados de configuração, abrir o painel
+                this.ui.showAlert('Bem-vindo! Por favor, configure sua conexão Baserow.', 'info');
+                this.ui.toggleConfig();
+            }
+            
+            // Habilitar botões de envio no M3U Manager agora que a configuração está pronta
+            if(this.m3uManager) {
+                this.m3uManager.updateSendButtonsState(true);
+            }
+        } catch (error) {
+            console.error('[App] Erro ao carregar configurações do usuário:', error);
+            this.ui.showAlert('Não foi possível carregar as configurações do usuário.', 'warning');
+        }
+    }
+
+    /**
+     * Salvar configurações do usuário
+     */
+    async saveUserConfig() {
+        try {
+            const mappingConteudos = {};
+            document.querySelectorAll('[data-mapping="conteudos"] select').forEach(select => {
+                if (select.value) {
+                    mappingConteudos[select.name] = select.value;
+                }
+            });
+
+            const mappingEpisodios = {};
+            document.querySelectorAll('[data-mapping="episodios"] select').forEach(select => {
+                if (select.value) {
+                    mappingEpisodios[select.name] = select.value;
+                }
+            });
+
+            const data = {
+                baserow_api_url: document.getElementById('apiUrl').value,
+                baserow_api_token: document.getElementById('apiToken').value,
+                conteudos_table_id: document.getElementById('conteudosTableId').value,
+                categorias_table_id: document.getElementById('categoriasTableId').value,
+                episodios_table_id: document.getElementById('episodiosTableId').value,
+                banners_table_id: document.getElementById('bannersTableId').value,
+                usuarios_table_id: document.getElementById('usuariosTableId').value,
+                canais_table_id: document.getElementById('canaisTableId').value,
+                pagamentos_table_id: document.getElementById('pagamentosTableId').value,
+                planos_table_id: document.getElementById('planosTableId').value,
+                tv_categoria_table_id: document.getElementById('tvCategoriaTableId').value,
+                mapping_conteudos: mappingConteudos,
+                mapping_episodios: mappingEpisodios,
+                m3u_url: document.getElementById('xtreamBaseUrl').value,
+                m3u_username: document.getElementById('xtreamUsername').value,
+                m3u_password: document.getElementById('xtreamPassword').value
+            };
+
+            const response = await fetch('save_config.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                this.ui.showAlert('Configurações salvas no servidor.', 'success');
+            } else {
+                this.ui.showAlert('Erro ao salvar configurações no servidor.', 'danger');
+            }
+        } catch (error) {
+            console.error('[App] Erro ao salvar configurações do usuário:', error);
+            this.ui.showAlert('Erro ao salvar configurações do usuário.', 'danger');
+        }
+    }
+
+>>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
     // Aliases para métodos da UI (para compatibilidade)
     toggleConfig() { return this.ui.toggleConfig(); }
     testConnection() { return this.ui.testConnection(); }

@@ -2,14 +2,19 @@ import { BASEROW_CONFIGS, DEFAULT_CONFIG } from './config.js';
 
 class BaserowAPI {
     constructor() {
+<<<<<<< HEAD
         this.currentSite = 'oficial'; // Site padrão
         this.config = null;
+=======
+        this.config = {};
+>>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
         this.token = '';
         this.isConnected = false;
         this.retryCount = 0;
         this.readOnlyFields = new Set(['id', 'created_on', 'updated_on']); // Campos somente leitura
     }
 
+<<<<<<< HEAD
     // Configurar site atual
     setSite(siteName) {
         if (!BASEROW_CONFIGS[siteName]) {
@@ -37,6 +42,29 @@ class BaserowAPI {
         };
     }
 
+=======
+    // Configurar API
+    setConfig(config) {
+        this.config = {
+            apiUrl: config.apiUrl,
+            conteudosTableId: config.conteudosTableId,
+            categoriasTableId: config.categoriasTableId,
+            episodiosTableId: config.episodiosTableId,
+            usuariosTableId: config.usuariosTableId,
+            bannersTableId: config.bannersTableId,
+            canaisTableId: config.canaisTableId,
+            pagamentosTableId: config.pagamentosTableId,
+            planosTableId: config.planosTableId,
+            tvCategoriaTableId: config.tvCategoriaTableId,
+            mapping_conteudos: config.mapping_conteudos,
+            mapping_episodios: config.mapping_episodios
+        };
+        this.token = config.token;
+        this.isConnected = false;
+    }
+
+
+>>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
     // Filtrar campos somente leitura
     filterReadOnlyFields(data) {
         if (!data || typeof data !== 'object') return data;
@@ -61,12 +89,17 @@ class BaserowAPI {
 
     // Fazer requisição HTTP
     async makeRequest(endpoint, options = {}) {
+<<<<<<< HEAD
         if (!this.config) {
             throw new Error('Nenhum site configurado. Use setSite() primeiro.');
         }
 
         if (!this.token) {
             throw new Error('Token não configurado. Use setToken() primeiro.');
+=======
+        if (!this.config.apiUrl || !this.token) {
+            throw new Error('API não configurada. Use setConfig() primeiro.');
+>>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
         }
 
         const url = `${this.config.apiUrl.replace(/\/$/, '')}/${endpoint.replace(/^\//, '')}`;
@@ -235,6 +268,7 @@ class BaserowAPI {
         }
     }
 
+<<<<<<< HEAD
     // Testar conexão
     async testConnection() {
         try {
@@ -322,6 +356,60 @@ class BaserowAPI {
         }
 
         throw new Error(`Não foi possível carregar tabelas. Último erro: ${lastError?.message || 'Erro desconhecido'}`);
+=======
+    async testConnection() {
+        if (!this.config.apiUrl || !this.token) {
+            return { success: false, error: 'API URL e Token são obrigatórios.' };
+        }
+    
+        const tableIds = {
+            Conteúdos: this.config.conteudosTableId,
+            Categorias: this.config.categoriasTableId,
+            Episódios: this.config.episodiosTableId,
+            Usuários: this.config.usuariosTableId,
+            Banners: this.config.bannersTableId,
+            Canais: this.config.canaisTableId,
+            Pagamentos: this.config.pagamentosTableId,
+            Planos: this.config.planosTableId,
+            'Tv Categoria': this.config.tvCategoriaTableId
+        };
+    
+        for (const [name, id] of Object.entries(tableIds)) {
+            if (!id) {
+                continue; // Pula tabelas não configuradas
+            }
+            try {
+                console.log(`[API] Verificando acesso à tabela: ${name} (ID: ${id})`);
+                await this.loadTableFields(id);
+            } catch (error) {
+                return { success: false, error: `Falha ao acessar a tabela '${name}': ${error.message}` };
+            }
+        }
+    
+        this.isConnected = true;
+        return { success: true, message: 'Conexão e acesso às tabelas verificados com sucesso!' };
+    }
+
+    // Retorna uma lista formatada das tabelas configuradas
+    loadTables() {
+        if (!this.isConnected) {
+            return [];
+        }
+        
+        const tables = [
+            { id: this.config.conteudosTableId, name: 'Conteúdos' },
+            { id: this.config.categoriasTableId, name: 'Categorias' },
+            { id: this.config.episodiosTableId, name: 'Episódios' },
+            { id: this.config.usuariosTableId, name: 'Usuários' },
+            { id: this.config.bannersTableId, name: 'Banners' },
+            { id: this.config.canaisTableId, name: 'Canais' },
+            { id: this.config.pagamentosTableId, name: 'Pagamentos' },
+            { id: this.config.planosTableId, name: 'Planos' },
+            { id: this.config.tvCategoriaTableId, name: 'Tv Categoria' }
+        ];
+
+        return tables.filter(t => t.id); // Retorna apenas as tabelas que têm um ID configurado
+>>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
     }
 
     // Carregar campos de uma tabela

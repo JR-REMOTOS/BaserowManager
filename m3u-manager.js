@@ -20,12 +20,17 @@ class M3UManager {
         this.isLoading = false;
         this.xtreamAPI = new XtreamAPI();
         this.fieldMapper = new M3UFieldMapper();
+<<<<<<< HEAD
+=======
+        this.worker = new Worker('m3u-worker.js');
+>>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
         this.connectionStatus = 'disconnected';
         this.lastError = null;
         this.retryCount = 0;
         this.maxRetries = 3;
         this.batchSize = 100; // Tamanho do lote para processamento e renderização
         this.renderedCounts = { movies: 0, series: 0, channels: 0 }; // Contador de itens renderizados por categoria
+<<<<<<< HEAD
         this.init();
     }
 
@@ -33,6 +38,23 @@ class M3UManager {
         this.setupEventListeners();
         this.initializeStatusIndicator();
         console.log('[M3U] M3U Manager inicializado');
+=======
+        
+        this.worker.onmessage = (event) => {
+            console.log('[M3U] Dados processados recebidos do worker.');
+            this.processedContent = event.data;
+            this.renderContent(true); // Re-renderizar com dados completos
+        };
+
+        this.init();
+    }
+
+    async init() {
+        this.setupEventListeners();
+        this.initializeStatusIndicator();
+        console.log('[M3U] M3U Manager inicializado');
+        await this.loadM3UContentFromDB();
+>>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
     }
 
     initializeStatusIndicator() {
@@ -103,15 +125,49 @@ class M3UManager {
                 this.toggleSelectAll();
             } else if (e.target.id === 'addSelectedItems') {
                 this.addSelectedItems();
+<<<<<<< HEAD
             } else if (e.target.id === 'loadMoreMovies') {
                 this.loadMoreItems('movies');
             } else if (e.target.id === 'loadMoreSeries') {
                 this.loadMoreItems('series');
             } else if (e.target.id === 'loadMoreChannels') {
+=======
+            }
+        });
+
+        // Adicionar listeners para botões "Carregar Mais" de forma delegada
+        document.addEventListener('click', (e) => {
+            if (e.target.matches('#loadMoreMovies')) {
+                this.loadMoreItems('movies');
+            } else if (e.target.matches('#loadMoreSeries')) {
+                this.loadMoreItems('series');
+            } else if (e.target.matches('#loadMoreChannels')) {
+>>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
                 this.loadMoreItems('channels');
             }
         });
 
+<<<<<<< HEAD
+=======
+        // Rolagem infinita
+        const mainContent = document.querySelector('.main-content');
+        if (mainContent) {
+            mainContent.addEventListener('scroll', () => {
+                if (this.isLoading) return;
+
+                const activeTab = document.querySelector('.tab-pane.active');
+                if (!activeTab) return;
+
+                const category = activeTab.id;
+                const loadMoreButton = document.getElementById(`loadMore${category.charAt(0).toUpperCase() + category.slice(1)}`);
+
+                if (loadMoreButton && mainContent.scrollTop + mainContent.clientHeight >= mainContent.scrollHeight - 200) {
+                    this.loadMoreItems(category);
+                }
+            });
+        }
+
+>>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
         document.addEventListener('change', (e) => {
             if (e.target.classList.contains('item-checkbox')) {
                 this.handleItemSelection(e.target);
@@ -260,6 +316,16 @@ class M3UManager {
     }
 
     async loadXtreamContent(forceDownload = true) {
+<<<<<<< HEAD
+=======
+        if (forceDownload) {
+            const confirmed = confirm("Isso limpará os dados M3U salvos localmente e buscará uma nova lista do servidor. Deseja continuar?");
+            if (!confirmed) {
+                return;
+            }
+        }
+
+>>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
         const baseUrl = document.getElementById('xtreamBaseUrl')?.value?.trim();
         const username = document.getElementById('xtreamUsername')?.value?.trim();
         const password = document.getElementById('xtreamPassword')?.value?.trim();
@@ -316,6 +382,14 @@ class M3UManager {
             this.updateConnectionStatus('connected', `${stats.total} itens carregados`);
             this.showAlert(`🎉 Lista Xtream carregada com sucesso!\n\n📊 ${stats.total} itens encontrados:\n🎬 ${stats.movies} filmes\n📺 ${stats.series} séries\n📡 ${stats.channels} canais`, 'success');
             
+<<<<<<< HEAD
+=======
+            // Salvar configurações do usuário
+            if (this.baserowManager && typeof this.baserowManager.saveUserConfig === 'function') {
+                await this.baserowManager.saveUserConfig();
+            }
+
+>>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
         } catch (error) {
             console.error('[M3U] Erro ao carregar Xtream:', error);
             this.lastError = error;
@@ -414,6 +488,59 @@ class M3UManager {
 
         await this.processContent();
         await this.renderContent();
+<<<<<<< HEAD
+=======
+        
+        // Salvar conteúdo no banco de dados
+        await this.saveM3UContentToDB();
+    }
+
+    async loadM3UContentFromDB() {
+        try {
+            this.showAlert('🔄 Carregando conteúdo M3U salvo...', 'info');
+            const response = await fetch('load_m3u_content.php');
+            const result = await response.json();
+
+            if (result.success && result.data && result.data.length > 0) {
+                this.currentPlaylist = result.data;
+                await this.processContent();
+                await this.renderContent();
+                this.showAlert('✅ Conteúdo M3U carregado do banco de dados.', 'success');
+            } else {
+                this.showAlert('Nenhum conteúdo M3U local encontrado.', 'info');
+            }
+        } catch (error) {
+            console.error('[M3U] Erro ao carregar conteúdo do DB:', error);
+            this.showAlert('❌ Erro ao carregar conteúdo M3U local.', 'danger');
+        }
+    }
+
+    async saveM3UContentToDB() {
+        if (!this.currentPlaylist || this.currentPlaylist.length === 0) {
+            return;
+        }
+
+        try {
+            this.showAlert('💾 Salvando conteúdo da lista no banco de dados...', 'info');
+            const response = await fetch('save_m3u_content.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(this.currentPlaylist)
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                this.showAlert('✅ Conteúdo da lista salvo com sucesso!', 'success');
+            } else {
+                this.showAlert('❌ Erro ao salvar conteúdo da lista: ' + result.message, 'danger');
+            }
+        } catch (error) {
+            console.error('[M3U] Erro ao salvar conteúdo no DB:', error);
+            this.showAlert('❌ Erro de conexão ao salvar conteúdo da lista.', 'danger');
+        }
+>>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
     }
 
     parseM3U(content) {
@@ -559,6 +686,7 @@ class M3UManager {
         }
     }
 
+<<<<<<< HEAD
     async processContent() {
         this.processedContent = {
             movies: [],
@@ -627,6 +755,45 @@ class M3UManager {
 
         const stats = this.getTotalItemsStats();
         console.log('[M3U] Resultado do processamento:', stats);
+=======
+    async processContent(isInitial = true) {
+        if (isInitial) {
+            // Renderização inicial rápida com dados não processados
+            this.renderInitialContent();
+            // Enviar para o worker processar em segundo plano
+            this.worker.postMessage(this.currentPlaylist);
+        } else {
+            // Re-renderização com dados processados do worker
+            this.renderContent(true);
+        }
+    }
+
+    renderInitialContent() {
+        let container = document.getElementById('m3uContent');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'm3uContent';
+            document.querySelector('.main-content').appendChild(container);
+        }
+
+        const initialItems = this.currentPlaylist.slice(0, this.batchSize);
+        this.renderedCounts.movies = initialItems.length; // Usar 'movies' como contador geral inicial
+
+        const html = `
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-spinner fa-spin me-2"></i>
+                    Processando lista completa em segundo plano. A interface será atualizada em breve.
+                </div>
+                <div class="row">
+                    ${initialItems.map(item => this.renderItem(item, 'movie')).join('')}
+                </div>
+                <button class="btn btn-outline-primary w-100 mt-3" id="loadMoreMovies" disabled>Carregando...</button>
+            </div>
+        `;
+        container.innerHTML = html;
+        container.style.display = 'block';
+>>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
     }
 
     validateCategorization() {
@@ -859,6 +1026,24 @@ class M3UManager {
         // Inicializar tooltips do Bootstrap
         const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
         tooltipTriggerList.forEach(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+<<<<<<< HEAD
+=======
+
+        // Verificar e habilitar/desabilitar botões de envio
+        this.checkAndEnableButtons();
+    }
+
+    checkAndEnableButtons() {
+        const config = this.baserowManager.api.config;
+        const hasConteudosTable = !!config.conteudosTableId;
+        const hasEpisodiosTable = !!config.episodiosTableId;
+        const hasConteudosMapping = config.mapping_conteudos && Object.keys(config.mapping_conteudos).length > 0;
+        const hasEpisodiosMapping = config.mapping_episodios && Object.keys(config.mapping_episodios).length > 0;
+
+        const isReady = hasConteudosTable && hasEpisodiosTable && hasConteudosMapping && hasEpisodiosMapping;
+        
+        this.updateSendButtonsState(isReady);
+>>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
     }
 
     renderBaserowStatus() {
@@ -897,11 +1082,21 @@ class M3UManager {
             return '<div class="text-center py-4 text-muted">Nenhum filme encontrado</div>';
         }
 
+<<<<<<< HEAD
         const groupedMovies = this.groupBy(this.processedContent.movies.slice(0, this.batchSize), 'category');
         this.renderedCounts.movies = Math.min(this.batchSize, this.processedContent.movies.length);
         
         return Object.entries(groupedMovies).map(([category, movies]) => `
             <div class="category-section mb-4">
+=======
+        const moviesToRender = this.processedContent.movies.slice(0, this.batchSize);
+        this.renderedCounts.movies = moviesToRender.length;
+
+        const groupedMovies = this.groupBy(moviesToRender, 'category');
+        
+        let html = Object.entries(groupedMovies).map(([category, movies]) => `
+            <div class="category-section mb-4" data-category-group="movies">
+>>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
                 <div class="category-header d-flex justify-content-between align-items-center mb-3">
                     <h6 class="mb-0">
                         <i class="fas fa-folder me-2"></i>${category}
@@ -916,6 +1111,15 @@ class M3UManager {
                 </div>
             </div>
         `).join('');
+<<<<<<< HEAD
+=======
+
+        if (this.processedContent.movies.length > this.renderedCounts.movies) {
+            html += `<button class="btn btn-outline-primary w-100 mt-3" id="loadMoreMovies" onclick="app.m3uManager.loadMoreItems('movies')">Carregar Mais Filmes</button>`;
+        }
+
+        return html;
+>>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
     }
 
     renderSeries() {
@@ -923,6 +1127,7 @@ class M3UManager {
             return '<div class="text-center py-4 text-muted">Nenhuma série encontrada</div>';
         }
 
+<<<<<<< HEAD
         const seriesKeys = Object.keys(this.processedContent.series).slice(0, this.batchSize);
         this.renderedCounts.series = Math.min(this.batchSize, seriesKeys.length);
         
@@ -930,6 +1135,16 @@ class M3UManager {
             const series = this.processedContent.series[seriesName];
             return `
                 <div class="series-section mb-4">
+=======
+        const seriesKeys = Object.keys(this.processedContent.series);
+        const seriesToRender = seriesKeys.slice(0, this.batchSize);
+        this.renderedCounts.series = seriesToRender.length;
+        
+        let html = seriesToRender.map(seriesName => {
+            const series = this.processedContent.series[seriesName];
+            return `
+                <div class="series-section mb-4" data-category-group="series">
+>>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
                     <div class="series-header d-flex justify-content-between align-items-center mb-3 p-3 bg-light rounded">
                         <div class="series-info d-flex align-items-center">
                             ${series.logo ? `<img src="${series.logo}" alt="${seriesName}" class="series-logo me-3" style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px;" onerror="this.style.display='none'">` : ''}
@@ -955,6 +1170,15 @@ class M3UManager {
                 </div>
             `;
         }).join('');
+<<<<<<< HEAD
+=======
+
+        if (seriesKeys.length > this.renderedCounts.series) {
+            html += `<button class="btn btn-outline-primary w-100 mt-3" id="loadMoreSeries" onclick="app.m3uManager.loadMoreItems('series')">Carregar Mais Séries</button>`;
+        }
+
+        return html;
+>>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
     }
 
     renderChannels() {
@@ -962,11 +1186,21 @@ class M3UManager {
             return '<div class="text-center py-4 text-muted">Nenhum canal encontrado</div>';
         }
 
+<<<<<<< HEAD
         const groupedChannels = this.groupBy(this.processedContent.channels.slice(0, this.batchSize), 'category');
         this.renderedCounts.channels = Math.min(this.batchSize, this.processedContent.channels.length);
         
         return Object.entries(groupedChannels).map(([category, channels]) => `
             <div class="category-section mb-4">
+=======
+        const channelsToRender = this.processedContent.channels.slice(0, this.batchSize);
+        this.renderedCounts.channels = channelsToRender.length;
+
+        const groupedChannels = this.groupBy(channelsToRender, 'category');
+        
+        let html = Object.entries(groupedChannels).map(([category, channels]) => `
+            <div class="category-section mb-4" data-category-group="channels">
+>>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
                 <div class="category-header d-flex justify-content-between align-items-center mb-3">
                     <h6 class="mb-0">
                         <i class="fas fa-broadcast-tower me-2"></i>${category}
@@ -981,6 +1215,15 @@ class M3UManager {
                 </div>
             </div>
         `).join('');
+<<<<<<< HEAD
+=======
+
+        if (this.processedContent.channels.length > this.renderedCounts.channels) {
+            html += `<button class="btn btn-outline-primary w-100 mt-3" id="loadMoreChannels" onclick="app.m3uManager.loadMoreItems('channels')">Carregar Mais Canais</button>`;
+        }
+
+        return html;
+>>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
     }
 
     renderItem(item, type) {
@@ -1026,6 +1269,7 @@ class M3UManager {
     }
 
     async loadMoreItems(category) {
+<<<<<<< HEAD
         const tabContent = document.getElementById(category);
         if (!tabContent) return;
 
@@ -1124,6 +1368,99 @@ class M3UManager {
     }
 
     async addSingleItem(itemId) {
+=======
+        const loadMoreButton = document.getElementById(`loadMore${category.charAt(0).toUpperCase() + category.slice(1)}`);
+        if (!loadMoreButton) return;
+    
+        loadMoreButton.disabled = true;
+        loadMoreButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Carregando...';
+    
+        const currentCount = this.renderedCounts[category];
+        const newCount = currentCount + this.batchSize;
+    
+        let items;
+        let container;
+        let html = '';
+    
+        switch (category) {
+            case 'movies':
+                items = this.processedContent.movies.slice(currentCount, newCount);
+                container = document.querySelector('#movies .row');
+                html = items.map(movie => this.renderItem(movie, 'movie')).join('');
+                break;
+            case 'series':
+                const seriesKeys = Object.keys(this.processedContent.series);
+                items = seriesKeys.slice(currentCount, newCount);
+                container = document.querySelector('#series');
+                html = items.map(seriesName => this.renderSeriesItem(seriesName)).join('');
+                break;
+            case 'channels':
+                items = this.processedContent.channels.slice(currentCount, newCount);
+                container = document.querySelector('#channels .row');
+                html = items.map(channel => this.renderItem(channel, 'channel')).join('');
+                break;
+        }
+    
+        if (container && html) {
+            // Usar um elemento temporário para inserir o HTML e evitar problemas de script
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = html;
+            while(tempDiv.firstChild) {
+                container.appendChild(tempDiv.firstChild);
+            }
+        }
+    
+        this.renderedCounts[category] = newCount;
+    
+        if (newCount >= (category === 'series' ? Object.keys(this.processedContent.series).length : this.processedContent[category].length)) {
+            loadMoreButton.remove();
+        } else {
+            loadMoreButton.disabled = false;
+            loadMoreButton.innerHTML = `Carregar Mais ${category.charAt(0).toUpperCase() + category.slice(1)}`;
+        }
+    
+        // Re-inicializar tooltips para novos elementos
+        const tooltipTriggerList = [].slice.call(container.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.forEach(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+    }
+
+    renderSeriesItem(seriesName) {
+        const series = this.processedContent.series[seriesName];
+        return `
+            <div class="series-section mb-4" data-category-group="series">
+                <div class="series-header d-flex justify-content-between align-items-center mb-3 p-3 bg-light rounded">
+                    <div class="series-info d-flex align-items-center">
+                        ${series.logo ? `<img src="${series.logo}" alt="${seriesName}" class="series-logo me-3" style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px;" onerror="this.style.display='none'">` : ''}
+                        <div>
+                            <h6 class="mb-0">${seriesName}</h6>
+                            <small class="text-muted">${series.episodes.length} episódios</small>
+                        </div>
+                    </div>
+                    <div class="series-actions">
+                        <button class="btn btn-outline-success btn-sm add-all-items me-2" data-category="series-${seriesName}" data-bs-toggle="tooltip" title="Adicionar todos os episódios desta série ao Baserow">
+                            <i class="fas fa-plus"></i> Adicionar Série
+                        </button>
+                        <button class="btn btn-outline-primary btn-sm series-toggle" data-series-name="${seriesName}" data-bs-toggle="tooltip" title="Mostrar/esconder episódios">
+                            <i class="fas fa-chevron-down"></i> Episódios
+                        </button>
+                    </div>
+                </div>
+                <div class="series-episodes collapse" id="episodes-${this.sanitizeId(seriesName)}">
+                    <div class="row">
+                        ${series.episodes.slice(0, this.batchSize).map(episode => this.renderItem(episode, 'episode')).join('')}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    async addSingleItem(itemId) {
+        if (!this.baserowManager.api.config.conteudosTableId) {
+            this.showAlert('Por favor, configure o mapeamento de campos e os IDs das tabelas antes de adicionar itens.', 'warning');
+            return;
+        }
+
+>>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
         const item = this.findItemById(itemId);
         if (!item) {
             this.showAlert('❌ Item não encontrado', 'error');
@@ -1133,9 +1470,15 @@ class M3UManager {
         const itemType = this.getItemTypeForMapping(item);
         const isEpisode = itemType === 'episode';
         
+<<<<<<< HEAD
         const tables = this.baserowManager.api.config.tables;
         const tableId = isEpisode ? tables.episodios.id : tables.conteudos.id;
         const tableName = isEpisode ? tables.episodios.name : tables.conteudos.name;
+=======
+        const apiConfig = this.baserowManager.api.config;
+        const tableId = isEpisode ? apiConfig.episodiosTableId : apiConfig.conteudosTableId;
+        const tableName = isEpisode ? 'Episódios' : 'Conteúdos';
+>>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
 
         if (!tableId) {
             this.showAlert(`⚠️ Tabela para "${itemType}" não encontrada na configuração.`, 'danger');
@@ -1168,9 +1511,20 @@ class M3UManager {
     }
 
     async addAllItems(category) {
+<<<<<<< HEAD
         const tables = this.baserowManager.api.config.tables;
         const moviesTableId = tables.conteudos.id;
         const episodesTableId = tables.episodios.id;
+=======
+        if (!this.baserowManager.api.config.conteudosTableId) {
+            this.showAlert('Por favor, configure o mapeamento de campos e os IDs das tabelas antes de adicionar itens.', 'warning');
+            return;
+        }
+
+        const apiConfig = this.baserowManager.api.config;
+        const moviesTableId = apiConfig.conteudosTableId;
+        const episodesTableId = apiConfig.episodiosTableId;
+>>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
 
         if (!moviesTableId || !episodesTableId) {
             this.showAlert('⚠️ IDs das tabelas de conteúdos ou episódios não encontrados na configuração.', 'danger');
@@ -1209,7 +1563,12 @@ class M3UManager {
             this.showAlert(`🚀 Iniciando adição em massa de ${items.length} itens...`, 'info');
 
             if (isSeries) {
+<<<<<<< HEAD
                 const seriesHeaderData = this.fieldMapper.mapSeriesHeader(this.processedContent.series[seriesName]);
+=======
+                const conteudosMapping = this.baserowManager.api.config.mapping_conteudos;
+                const seriesHeaderData = this.fieldMapper.mapSeriesHeader(this.processedContent.series[seriesName], conteudosMapping);
+>>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
                 for (const seasonData of seriesHeaderData) {
                     try {
                         await this.baserowManager.api.createRecord(moviesTableId, seasonData);
@@ -1256,15 +1615,29 @@ class M3UManager {
     }
 
     async addSelectedItems() {
+<<<<<<< HEAD
+=======
+        if (!this.baserowManager.api.config.conteudosTableId) {
+            this.showAlert('Por favor, configure o mapeamento de campos e os IDs das tabelas antes de adicionar itens.', 'warning');
+            return;
+        }
+
+>>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
         const selectedCheckboxes = document.querySelectorAll('.item-checkbox:checked');
         if (selectedCheckboxes.length === 0) {
             this.showAlert('⚠️ Selecione pelo menos um item', 'warning');
             return;
         }
         
+<<<<<<< HEAD
         const tables = this.baserowManager.api.config.tables;
         const moviesTableId = tables.conteudos.id;
         const episodesTableId = tables.episodios.id;
+=======
+        const apiConfig = this.baserowManager.api.config;
+        const moviesTableId = apiConfig.conteudosTableId;
+        const episodesTableId = apiConfig.episodiosTableId;
+>>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
 
         if (!moviesTableId || !episodesTableId) {
             this.showAlert('⚠️ IDs das tabelas de conteúdos ou episódios não encontrados na configuração.', 'danger');
@@ -1321,10 +1694,22 @@ class M3UManager {
 
     formatItemForBaserow(item) {
         const itemType = this.getItemTypeForMapping(item);
+<<<<<<< HEAD
         const tableFields = this.baserowManager.ui?.tableFields || [];
         const tableName = this.baserowManager.currentTable?.name || '';
         
         return this.fieldMapper.mapItemToBaserow(item, tableFields, tableName, itemType);
+=======
+        const config = this.baserowManager.api.config;
+        const mapping = itemType === 'episode' ? config.mapping_episodios : config.mapping_conteudos;
+        
+        if (!mapping) {
+            this.showAlert('Mapeamento de campos não configurado.', 'danger');
+            throw new Error('Mapeamento de campos não configurado.');
+        }
+
+        return this.fieldMapper.mapItemToBaserow(item, itemType, mapping);
+>>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
     }
 
     getItemTypeForMapping(item) {
@@ -1456,6 +1841,21 @@ class M3UManager {
         });
     }
 
+<<<<<<< HEAD
+=======
+    updateSendButtonsState(enabled) {
+        const buttons = document.querySelectorAll('.add-single-item, .add-all-items, #addSelectedItems');
+        buttons.forEach(btn => {
+            btn.disabled = !enabled;
+            if (!enabled) {
+                btn.title = 'Configure o mapeamento de campos primeiro.';
+            } else {
+                btn.title = ''; // Limpa o title
+            }
+        });
+    }
+
+>>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
     showAlert(message, type = 'info') {
         if (this.baserowManager && this.baserowManager.ui) {
             this.baserowManager.ui.showAlert(message, type);

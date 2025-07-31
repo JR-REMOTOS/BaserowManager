@@ -172,6 +172,7 @@
                         </div>
                     </div>
                     
+<<<<<<< HEAD
                     <!-- Seletor de Site -->
                     <div class="mb-4">
                         <label class="form-label text-white-50 small">Site Baserow:</label>
@@ -180,6 +181,8 @@
                         </select>
                     </div>
 
+=======
+>>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
                     <!-- Configuração -->
                     <div class="mb-4">
                         <button class="btn btn-light w-100 btn-custom" onclick="app.toggleConfig()">
@@ -221,8 +224,13 @@
                                 <div class="input-group mb-2">
                                     <input type="text" id="xtreamConnectionName" class="form-control m3u-url-input" placeholder="Nome da conexão">
                                 </div>
+<<<<<<< HEAD
                                 <button class="btn btn-success btn-custom w-100" type="button" id="loadXtreamBtn">
                                     <i class="fas fa-plug me-2"></i>Conectar Xtream
+=======
+                                <button class="btn btn-primary btn-custom w-100" type="button" id="loadXtreamBtn" title="Força a atualização da lista a partir do servidor, limpando os dados salvos localmente.">
+                                    <i class="fas fa-sync-alt me-2"></i>Forçar Atualização da Lista
+>>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
                                 </button>
                             </div>
                             <div id="m3uLoading" class="text-center mt-2" style="display: none;">
@@ -286,6 +294,7 @@
                     
                     <form id="configForm" class="position-relative">
                         <div class="row">
+<<<<<<< HEAD
                             <div class="col-md-8 mb-3">
                                 <label class="form-label">URL da API Baserow</label>
                                 <select class="form-control mb-2" id="apiUrlSelect" onchange="app.updateApiUrl()">
@@ -300,6 +309,11 @@
                                 <label class="form-label">Database ID</label>
                                 <input type="text" class="form-control" id="databaseId" placeholder="Digite o ID">
                                 <div class="form-text text-white-50">ID do banco de dados</div>
+=======
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label">URL da API Baserow</label>
+                                <input type="url" class="form-control" id="apiUrl" placeholder="https://api.baserow.io" required>
+>>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
                             </div>
                         </div>
                         <div class="row">
@@ -317,6 +331,73 @@
                                 </div>
                             </div>
                         </div>
+<<<<<<< HEAD
+=======
+                        <hr class="my-4">
+                        <h5 class="mb-3">IDs das Tabelas</h5>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">ID Tabela Conteúdos</label>
+                                <input type="text" class="form-control" id="conteudosTableId" placeholder="ID da Tabela de Conteúdos">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">ID Tabela Categorias</label>
+                                <input type="text" class="form-control" id="categoriasTableId" placeholder="ID da Tabela de Categorias">
+                            </div>
+                             <div class="col-md-4 mb-3">
+                                <label class="form-label">ID Tabela Episódios</label>
+                                <input type="text" class="form-control" id="episodiosTableId" placeholder="ID da Tabela de Episódios">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">ID Tabela Usuários</label>
+                                <input type="text" class="form-control" id="usuariosTableId" placeholder="ID da Tabela de Usuários">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">ID Tabela Banners</label>
+                                <input type="text" class="form-control" id="bannersTableId" placeholder="ID da Tabela de Banners">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">ID Tabela Canais</label>
+                                <input type="text" class="form-control" id="canaisTableId" placeholder="ID da Tabela de Canais">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">ID Tabela Pagamentos</label>
+                                <input type="text" class="form-control" id="pagamentosTableId" placeholder="ID da Tabela de Pagamentos">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">ID Tabela Planos</label>
+                                <input type="text" class="form-control" id="planosTableId" placeholder="ID da Tabela de Planos">
+                            </div>
+                             <div class="col-md-4 mb-3">
+                                <label class="form-label">ID Tabela Tv Categoria</label>
+                                <input type="text" class="form-control" id="tvCategoriaTableId" placeholder="ID da Tabela de Tv Categoria">
+                            </div>
+                        </div>
+                        <hr class="my-4">
+                        <h5 class="mb-3">Mapeamento de Campos</h5>
+                        <ul class="nav nav-tabs" id="mappingTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="conteudos-mapping-tab" data-bs-toggle="tab" data-bs-target="#conteudos-mapping" type="button" role="tab">Conteúdos</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="episodios-mapping-tab" data-bs-toggle="tab" data-bs-target="#episodios-mapping" type="button" role="tab">Episódios</button>
+                            </li>
+                        </ul>
+                        <div class="tab-content pt-3" id="mappingTabsContent">
+                            <div class="tab-pane fade show active" id="conteudos-mapping" role="tabpanel">
+                                <div class="row" id="conteudosMappingContainer">
+                                    <!-- Os selects serão populados dinamicamente pelo JS -->
+                                    <p class="text-white-50">Conecte-se para carregar os campos da tabela.</p>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade" id="episodios-mapping" role="tabpanel">
+                               <div class="row" id="episodiosMappingContainer">
+                                   <!-- Os selects serão populados dinamicamente pelo JS -->
+                                   <p class="text-white-50">Conecte-se e forneça o ID da tabela de episódios para carregar os campos.</p>
+                               </div>
+                            </div>
+                        </div>
+>>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
                         <div class="d-flex gap-2 flex-wrap">
                             <button type="button" class="btn btn-light btn-custom" onclick="app.testConnection()">
                                 <i class="fas fa-plug me-2"></i>Testar Conexão

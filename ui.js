@@ -20,9 +20,13 @@ class UIManager {
     // Inicializar interface
     init() {
         this.setupEventListeners();
+<<<<<<< HEAD
         this.renderSiteSelector();
         this.showEmptyState();
         this.loadSavedConfig();
+=======
+        this.showEmptyState();
+>>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
         this.setupM3UIntegration();
     }
 
@@ -170,6 +174,7 @@ class UIManager {
         }
     }
 
+<<<<<<< HEAD
     // Renderizar seletor de site
     renderSiteSelector() {
         const siteSelector = document.getElementById('siteSelector');
@@ -242,11 +247,14 @@ class UIManager {
             `;
         }
     }
+=======
+>>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
 
     // Mostrar/ocultar configuração
     toggleConfig() {
         const panel = document.getElementById('configPanel');
         if (panel) {
+<<<<<<< HEAD
             const isVisible = panel.style.display !== 'none';
             panel.style.display = isVisible ? 'none' : 'block';
             
@@ -254,6 +262,9 @@ class UIManager {
                 this.updateConfigInfo();
                 this.fillConfigForm();
             }
+=======
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+>>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
         }
     }
 
@@ -264,6 +275,7 @@ class UIManager {
         }
     }
 
+<<<<<<< HEAD
     // Preencher formulário de configuração
     fillConfigForm() {
         const config = this.api.getCurrentConfig();
@@ -290,6 +302,12 @@ class UIManager {
 
         // Preencher campos automaticamente
         this.fillConfigForm();
+=======
+    // Teste rápido
+    quickTest() {
+        // Esta função pode ser adaptada ou removida, já que não há mais "sites" pré-configurados.
+        // Por enquanto, ela apenas focará no campo de token.
+>>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
         
         // Destacar campo de token
         const tokenField = document.getElementById('apiToken');
@@ -307,6 +325,7 @@ class UIManager {
         this.showAlert('⚡ Configurações preenchidas! Cole seu token e clique em "Testar Conexão"', 'info');
     }
 
+<<<<<<< HEAD
     // Testar conexão
     async testConnection() {
         const apiUrl = document.getElementById('apiUrl')?.value?.trim();
@@ -378,6 +397,102 @@ class UIManager {
         } catch (error) {
             this.hideProgress();
             this.showAlert('Erro na conexão: ' + error.message, 'danger');
+=======
+    populateMappingDropdowns(fields, type, savedMapping = {}) {
+        const container = document.getElementById(`${type}MappingContainer`);
+        if (!container) return;
+
+        const mappingFields = [
+            'Nome', 'Capa', 'Categoria', 'Sinopse', 'Link', 'Tipo', 'Idioma', 
+            'Background', 'Nota', 'Temporadas', 'Tempo', 'Valor', 'Tipo Conteudo', 
+            'Meu', 'Destaque', 'Data de Lançamento', 'View', 'TMDB', 'Episódio'
+        ];
+
+        let html = '';
+        mappingFields.forEach(fieldName => {
+            if ((type === 'conteudos' && fieldName === 'Episódio') || (type === 'episodios' && fieldName === 'Temporadas')) {
+                return;
+            }
+
+            const savedValue = (savedMapping && savedMapping[fieldName]) ? savedMapping[fieldName] : '';
+
+            html += `<div class="col-md-4 mb-3">
+                        <label class="form-label text-white-50 small">${fieldName}</label>
+                        <select class="form-select form-select-sm" data-mapping="${type}" name="${fieldName}">
+                            <option value="">Não mapear</option>
+                            ${fields.map(f => `<option value="field_${f.id}" ${savedValue === `field_${f.id}` ? 'selected' : ''}>${f.name}</option>`).join('')}
+                        </select>
+                     </div>`;
+        });
+
+        container.innerHTML = html;
+    }
+
+    async testConnection() {
+        const mappingConteudos = {};
+        document.querySelectorAll('[data-mapping="conteudos"]').forEach(input => {
+            if (input.value) {
+                mappingConteudos[input.name] = input.value;
+            }
+        });
+
+        const mappingEpisodios = {};
+        document.querySelectorAll('[data-mapping="episodios"]').forEach(input => {
+            if (input.value) {
+                mappingEpisodios[input.name] = input.value;
+            }
+        });
+
+        const config = {
+            apiUrl: document.getElementById('apiUrl')?.value?.trim(),
+            token: document.getElementById('apiToken')?.value?.trim(),
+            conteudosTableId: document.getElementById('conteudosTableId')?.value?.trim(),
+            categoriasTableId: document.getElementById('categoriasTableId')?.value?.trim(),
+            episodiosTableId: document.getElementById('episodiosTableId')?.value?.trim(),
+            usuariosTableId: document.getElementById('usuariosTableId')?.value?.trim(),
+            bannersTableId: document.getElementById('bannersTableId')?.value?.trim(),
+            canaisTableId: document.getElementById('canaisTableId')?.value?.trim(),
+            pagamentosTableId: document.getElementById('pagamentosTableId')?.value?.trim(),
+            planosTableId: document.getElementById('planosTableId')?.value?.trim(),
+            tvCategoriaTableId: document.getElementById('tvCategoriaTableId')?.value?.trim(),
+            mapping_conteudos: mappingConteudos,
+            mapping_episodios: mappingEpisodios
+        };
+
+        if (!config.apiUrl || !config.token) {
+            this.showAlert('URL da API e Token são obrigatórios.', 'warning');
+            return;
+        }
+
+        this.showProgress('Testando Conexão', 'Verificando credenciais e tabelas...');
+        this.api.setConfig(config);
+
+        const result = await this.api.testConnection();
+
+        if (result.success) {
+            this.updateProgress(100, 'Conexão estabelecida!');
+            this.showAlert(result.message, 'success');
+            
+            const tables = this.api.loadTables();
+            this.renderTables(tables);
+
+            // Carregar campos e popular dropdowns
+            if (config.conteudosTableId) {
+                const fields = await this.api.loadTableFields(config.conteudosTableId);
+                this.populateMappingDropdowns(fields, 'conteudos', config.mapping_conteudos);
+            }
+            if (config.episodiosTableId) {
+                const fields = await this.api.loadTableFields(config.episodiosTableId);
+                this.populateMappingDropdowns(fields, 'episodios', config.mapping_episodios || {});
+            }
+            
+            this.hideProgress();
+            this.hideConfig();
+            this.saveConfig();
+        } else {
+            this.hideProgress();
+            this.showAlert(`Erro na conexão: ${result.error}`, 'danger');
+>>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
         }
     }
 
@@ -782,6 +897,7 @@ class UIManager {
 
     // Salvar configuração
     async saveConfig() {
+<<<<<<< HEAD
         const token = localStorage.getItem('authToken');
         if (!token) return;
 
@@ -840,6 +956,23 @@ class UIManager {
             console.error('Erro ao carregar configuração do servidor:', error);
             this.showAlert('Não foi possível carregar as configurações do servidor.', 'warning');
         }
+=======
+        if (window.app && typeof window.app.saveUserConfig === 'function') {
+            await window.app.saveUserConfig();
+        } else {
+            console.error("saveUserConfig function not found on global app object.");
+        }
+
+        if (window.app && window.app.m3uManager && typeof window.app.m3uManager.checkAndEnableButtons === 'function') {
+            window.app.m3uManager.checkAndEnableButtons();
+        }
+    }
+
+    // Carregar configuração salva (agora tratado pelo main.js)
+    async loadSavedConfig() {
+        // Esta função foi movida para main.js (loadUserConfig)
+        // e é chamada na inicialização do app.
+>>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
     }
 
     // Implementar funções restantes de CRUD, paginação, etc.
