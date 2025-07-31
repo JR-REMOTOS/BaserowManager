@@ -28,7 +28,7 @@ class M3UFieldMapper {
             'Meu': false,
             'Destaque': false,
             'Data de Lançamento': new Date().toISOString().split('T')[0],
-            'View': 0,
+            'Views': 0,
             'TMDB': '',
             'Episódio': item.episode || null,
         };
@@ -64,7 +64,7 @@ class M3UFieldMapper {
                 'Idioma': 'DUB',
                 // Deixar Link/URL vazios intencionalmente para a entrada da série
                 'Link': 'not link',
-                'View': 0,
+                'Views': 0,
                 'TMDB': '',
                 'Nota': 0,
                 'Tempo': 0,
