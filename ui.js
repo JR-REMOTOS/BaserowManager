@@ -166,6 +166,17 @@ class UIManager {
                 }
             });
         }
+
+        // Auto-save mapping
+        const mappingContainer = document.getElementById('mappingContainer');
+        if (mappingContainer) {
+            mappingContainer.addEventListener('change', (e) => {
+                if (e.target.tagName === 'SELECT') {
+                    this.showAlert('Mapeamento salvo automaticamente!', 'success');
+                    this.saveConfig();
+                }
+            });
+        }
     }
 
     // Mostrar/ocultar configuração

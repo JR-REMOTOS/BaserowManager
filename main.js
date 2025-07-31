@@ -709,6 +709,7 @@ class BaserowManager {
      * Carregar configurações do usuário
      */
     async loadUserConfig() {
+        this.ui.showProgress('Carregando Suas Configurações...', 'Aguarde enquanto preparamos tudo para você.');
         try {
             const response = await fetch('load_config.php');
             const result = await response.json();
@@ -780,6 +781,8 @@ class BaserowManager {
         } catch (error) {
             console.error('[App] Erro ao carregar configurações do usuário:', error);
             this.ui.showAlert('Não foi possível carregar as configurações do usuário.', 'warning');
+        } finally {
+            this.ui.hideProgress();
         }
     }
 
