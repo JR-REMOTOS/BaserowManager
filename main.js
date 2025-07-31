@@ -766,6 +766,11 @@ class BaserowManager {
                 this.ui.showAlert('Bem-vindo! Por favor, configure sua conexão Baserow.', 'info');
                 this.ui.toggleConfig();
             }
+
+            // Habilitar botões de envio no M3U Manager agora que a configuração está pronta
+            if(this.m3uManager) {
+                this.m3uManager.updateSendButtonsState(true);
+            }
         } catch (error) {
             console.error('[App] Erro ao carregar configurações do usuário:', error);
             this.ui.showAlert('Não foi possível carregar as configurações do usuário.', 'warning');

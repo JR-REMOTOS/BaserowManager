@@ -922,6 +922,9 @@ class M3UManager {
         // Inicializar tooltips do Bootstrap
         const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
         tooltipTriggerList.forEach(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+
+        // Desabilitar botões de envio até que a configuração esteja pronta
+        this.updateSendButtonsState(false);
     }
 
     renderBaserowStatus() {
@@ -1198,6 +1201,11 @@ class M3UManager {
     }
 
     async addSingleItem(itemId) {
+        if (!this.baserowManager.api.config.conteudosTableId) {
+            this.showAlert('Por favor, configure o mapeamento de campos e os IDs das tabelas antes de adicionar itens.', 'warning');
+            return;
+        }
+
         const item = this.findItemById(itemId);
         if (!item) {
             this.showAlert('❌ Item não encontrado', 'error');
@@ -1242,6 +1250,11 @@ class M3UManager {
     }
 
     async addAllItems(category) {
+        if (!this.baserowManager.api.config.conteudosTableId) {
+            this.showAlert('Por favor, configure o mapeamento de campos e os IDs das tabelas antes de adicionar itens.', 'warning');
+            return;
+        }
+
         const apiConfig = this.baserowManager.api.config;
         const moviesTableId = apiConfig.conteudosTableId;
         const episodesTableId = apiConfig.episodiosTableId;
@@ -1331,6 +1344,11 @@ class M3UManager {
     }
 
     async addSelectedItems() {
+        if (!this.baserowManager.api.config.conteudosTableId) {
+            this.showAlert('Por favor, configure o mapeamento de campos e os IDs das tabelas antes de adicionar itens.', 'warning');
+            return;
+        }
+
         const selectedCheckboxes = document.querySelectorAll('.item-checkbox:checked');
         if (selectedCheckboxes.length === 0) {
             this.showAlert('⚠️ Selecione pelo menos um item', 'warning');
@@ -1533,6 +1551,18 @@ class M3UManager {
         const otherButtons = document.querySelectorAll('.add-single-item, .add-all-items, #addSelectedItems');
         otherButtons.forEach(btn => {
             btn.disabled = loading;
+        });
+    }
+
+    updateSendButtonsState(enabled) {
+        const buttons = document.querySelectorAll('.add-single-item, .add-all-items, #addSelectedItems');
+        buttons.forEach(btn => {
+            btn.disabled = !enabled;
+            if (!enabled) {
+                btn.title = 'Configure o mapeamento de campos primeiro.';
+            } else {
+                btn.title = ''; // Limpa o title
+            }
         });
     }
 
