@@ -797,6 +797,13 @@ class BaserowManager {
                 }
             });
 
+            const mappingEpisodios = {};
+            document.querySelectorAll('[data-mapping="episodios"] select').forEach(select => {
+                if (select.value) {
+                    mappingEpisodios[select.name] = select.value;
+                }
+            });
+
             const data = {
                 baserow_api_url: document.getElementById('apiUrl').value,
                 baserow_api_token: document.getElementById('apiToken').value,
