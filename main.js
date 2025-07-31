@@ -762,8 +762,15 @@ class BaserowManager {
                     this.ui.populateMappingDropdowns(fields, 'episodios', apiConfig.mapping_episodios);
                 }
 
-                // Se não houver token, abrir o painel de configuração
-                if (!config.baserow_api_token) {
+                // Auto-conectar se as credenciais estiverem salvas
+                if (config.baserow_api_url && config.baserow_api_token) {
+                    this.ui.showAlert('Conectando automaticamente com as configurações salvas...', 'info');
+                    // Usar um pequeno timeout para permitir que a UI seja atualizada antes de iniciar o teste de conexão
+                    setTimeout(() => {
+                        this.ui.testConnection();
+                    }, 500);
+                } else {
+                    // Se não houver token, abrir o painel de configuração
                     this.ui.showAlert('Bem-vindo! Por favor, configure sua conexão Baserow.', 'info');
                     this.ui.toggleConfig();
                 }
