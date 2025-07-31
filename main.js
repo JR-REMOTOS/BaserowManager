@@ -748,7 +748,6 @@ class BaserowManager {
                     planosTableId: config.planos_table_id,
                     tvCategoriaTableId: config.tv_categoria_table_id,
                     mapping_conteudos: JSON.parse(config.mapping_conteudos || '{}'),
-                    mapping_conteudos: JSON.parse(config.mapping_conteudos || '{}'),
                     mapping_episodios: JSON.parse(config.mapping_episodios || '{}')
                 };
                 this.api.setConfig(apiConfig);
@@ -787,13 +786,6 @@ class BaserowManager {
             document.querySelectorAll('[data-mapping="conteudos"] select').forEach(select => {
                 if (select.value) {
                     mappingConteudos[select.name] = select.value;
-                }
-            });
-
-            const mappingEpisodios = {};
-            document.querySelectorAll('[data-mapping="episodios"] select').forEach(select => {
-                if (select.value) {
-                    mappingEpisodios[select.name] = select.value;
                 }
             });
 
