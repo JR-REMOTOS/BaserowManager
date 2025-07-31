@@ -40,6 +40,7 @@ class M3UManager {
     async init() {
         this.setupEventListeners();
         this.initializeStatusIndicator();
+        this.updateSendButtonsState(false); // Garantir que os botões comecem desabilitados
         console.log('[M3U] M3U Manager inicializado');
         await this.loadM3UContentFromDB();
     }

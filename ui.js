@@ -295,6 +295,11 @@ class UIManager {
             this.hideProgress();
             this.hideConfig();
             this.saveConfig();
+
+            // Verificar se os botões do M3U devem ser habilitados
+            if (window.app && window.app.m3uManager) {
+                window.app.m3uManager.checkAndEnableButtons();
+            }
         } else {
             this.hideProgress();
             this.showAlert(`Erro na conexão: ${result.error}`, 'danger');
