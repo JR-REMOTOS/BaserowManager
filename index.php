@@ -172,17 +172,6 @@
                         </div>
                     </div>
                     
-<<<<<<< HEAD
-                    <!-- Seletor de Site -->
-                    <div class="mb-4">
-                        <label class="form-label text-white-50 small">Site Baserow:</label>
-                        <select class="form-control site-selector" id="siteSelector">
-                            <option value="">Selecione um site...</option>
-                        </select>
-                    </div>
-
-=======
->>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
                     <!-- Configuração -->
                     <div class="mb-4">
                         <button class="btn btn-light w-100 btn-custom" onclick="app.toggleConfig()">
@@ -224,13 +213,8 @@
                                 <div class="input-group mb-2">
                                     <input type="text" id="xtreamConnectionName" class="form-control m3u-url-input" placeholder="Nome da conexão">
                                 </div>
-<<<<<<< HEAD
-                                <button class="btn btn-success btn-custom w-100" type="button" id="loadXtreamBtn">
-                                    <i class="fas fa-plug me-2"></i>Conectar Xtream
-=======
                                 <button class="btn btn-primary btn-custom w-100" type="button" id="loadXtreamBtn" title="Força a atualização da lista a partir do servidor, limpando os dados salvos localmente.">
                                     <i class="fas fa-sync-alt me-2"></i>Forçar Atualização da Lista
->>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
                                 </button>
                             </div>
                             <div id="m3uLoading" class="text-center mt-2" style="display: none;">
@@ -294,26 +278,9 @@
                     
                     <form id="configForm" class="position-relative">
                         <div class="row">
-<<<<<<< HEAD
-                            <div class="col-md-8 mb-3">
-                                <label class="form-label">URL da API Baserow</label>
-                                <select class="form-control mb-2" id="apiUrlSelect" onchange="app.updateApiUrl()">
-                                    <option value="custom">URL Personalizada</option>
-                                    <option value="https://api.baserow.io">Baserow Oficial (api.baserow.io)</option>
-                                    <option value="http://basebanco.site">Baserow VPS (basebanco.site)</option>
-                                </select>
-                                <input type="url" class="form-control" id="apiUrl" placeholder="https://api.baserow.io" required>
-                                <div class="form-text text-white-50">Selecione uma opção ou digite sua URL</div>
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label">Database ID</label>
-                                <input type="text" class="form-control" id="databaseId" placeholder="Digite o ID">
-                                <div class="form-text text-white-50">ID do banco de dados</div>
-=======
                             <div class="col-md-12 mb-3">
                                 <label class="form-label">URL da API Baserow</label>
                                 <input type="url" class="form-control" id="apiUrl" placeholder="https://api.baserow.io" required>
->>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
                             </div>
                         </div>
                         <div class="row">
@@ -331,8 +298,6 @@
                                 </div>
                             </div>
                         </div>
-<<<<<<< HEAD
-=======
                         <hr class="my-4">
                         <h5 class="mb-3">IDs das Tabelas</h5>
                         <div class="row">
@@ -397,7 +362,6 @@
                                </div>
                             </div>
                         </div>
->>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
                         <div class="d-flex gap-2 flex-wrap">
                             <button type="button" class="btn btn-light btn-custom" onclick="app.testConnection()">
                                 <i class="fas fa-plug me-2"></i>Testar Conexão

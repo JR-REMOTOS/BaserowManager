@@ -47,12 +47,9 @@ class BaserowManager {
             // Configurar navegação entre views
             this.setupViewNavigation();
             
-<<<<<<< HEAD
-=======
             // Carregar configurações do usuário
             await this.loadUserConfig();
 
->>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
             this.isInitialized = true;
             console.log('[App] Aplicação inicializada com sucesso');
             
@@ -708,8 +705,6 @@ class BaserowManager {
         this.ui.searchRecords();
     }
 
-<<<<<<< HEAD
-=======
     /**
      * Carregar configurações do usuário
      */
@@ -847,7 +842,6 @@ class BaserowManager {
         }
     }
 
->>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
     // Aliases para métodos da UI (para compatibilidade)
     toggleConfig() { return this.ui.toggleConfig(); }
     testConnection() { return this.ui.testConnection(); }

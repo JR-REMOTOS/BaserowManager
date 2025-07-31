@@ -595,8 +595,6 @@ button {
     body {
         background: #fff !important;
     }
-<<<<<<< HEAD
-=======
 }
 
 /* Fix para inputs de mapeamento no painel de configuração */
@@ -607,5 +605,4 @@ button {
 
 #mappingTabsContent .form-label {
     color: #212529 !important; /* Cor preta para as etiquetas */
->>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
 }

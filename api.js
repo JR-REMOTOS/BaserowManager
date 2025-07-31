@@ -2,47 +2,13 @@ import { BASEROW_CONFIGS, DEFAULT_CONFIG } from './config.js';
 
 class BaserowAPI {
     constructor() {
-<<<<<<< HEAD
-        this.currentSite = 'oficial'; // Site padrão
-        this.config = null;
-=======
         this.config = {};
->>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
         this.token = '';
         this.isConnected = false;
         this.retryCount = 0;
         this.readOnlyFields = new Set(['id', 'created_on', 'updated_on']); // Campos somente leitura
     }
 
-<<<<<<< HEAD
-    // Configurar site atual
-    setSite(siteName) {
-        if (!BASEROW_CONFIGS[siteName]) {
-            throw new Error(`Site '${siteName}' não encontrado nas configurações`);
-        }
-        this.currentSite = siteName;
-        this.config = BASEROW_CONFIGS[siteName];
-        this.isConnected = false;
-        return this;
-    }
-
-    // Configurar token
-    setToken(token) {
-        this.token = token.trim();
-        return this;
-    }
-
-    // Obter configuração atual
-    getCurrentConfig() {
-        return {
-            site: this.currentSite,
-            config: this.config,
-            token: this.token ? '***' + this.token.slice(-4) : '',
-            isConnected: this.isConnected
-        };
-    }
-
-=======
     // Configurar API
     setConfig(config) {
         this.config = {
@@ -64,7 +30,6 @@ class BaserowAPI {
     }
 
 
->>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
     // Filtrar campos somente leitura
     filterReadOnlyFields(data) {
         if (!data || typeof data !== 'object') return data;
@@ -89,17 +54,8 @@ class BaserowAPI {
 
     // Fazer requisição HTTP
     async makeRequest(endpoint, options = {}) {
-<<<<<<< HEAD
-        if (!this.config) {
-            throw new Error('Nenhum site configurado. Use setSite() primeiro.');
-        }
-
-        if (!this.token) {
-            throw new Error('Token não configurado. Use setToken() primeiro.');
-=======
         if (!this.config.apiUrl || !this.token) {
             throw new Error('API não configurada. Use setConfig() primeiro.');
->>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
         }
 
         const url = `${this.config.apiUrl.replace(/\/$/, '')}/${endpoint.replace(/^\//, '')}`;
@@ -268,95 +224,6 @@ class BaserowAPI {
         }
     }
 
-<<<<<<< HEAD
-    // Testar conexão
-    async testConnection() {
-        try {
-            // Testa diretamente carregando as tabelas
-            console.log('[API] Testando conexão carregando tabelas...');
-            await this.loadTables();
-            this.isConnected = true;
-            return { success: true, message: 'Conexão estabelecida com sucesso!' };
-        } catch (error) {
-            console.log('[API] Erro no teste de tabelas, tentando endpoint alternativo...');
-            
-            // Tenta endpoint alternativo baseado no site
-            try {
-                let testEndpoint;
-                if (this.config.apiUrl.includes('api.baserow.io')) {
-                    // Para o site oficial, tenta um endpoint que sabemos que funciona
-                    testEndpoint = 'api/database/tables/all-tables/';
-                } else {
-                    // Para o VPS, tenta outro endpoint
-                    testEndpoint = `api/database/tables/database/${this.config.databaseId}/`;
-                }
-                
-                await this.makeRequest(testEndpoint);
-                this.isConnected = true;
-                return { success: true, message: 'Conexão estabelecida! API funcionando.' };
-            } catch (altError) {
-                this.isConnected = false;
-                return { success: false, error: `Falha na conexão: ${error.message}` };
-            }
-        }
-    }
-
-    // Carregar tabelas
-    async loadTables() {
-        const endpoints = [
-            'api/database/tables/all-tables/',
-            `api/database/tables/database/${this.config.databaseId}/`
-        ];
-
-        let lastError = null;
-
-        for (const endpoint of endpoints) {
-            try {
-                console.log(`[API] Tentando endpoint: ${endpoint}`);
-                const data = await this.makeRequest(endpoint);
-                
-                let tablesList = Array.isArray(data) ? data : (data.results || []);
-                
-                console.log(`[API] Resposta do endpoint ${endpoint}:`, data);
-                
-                // Se não encontrou tabelas na resposta, usar as configuradas
-                if (tablesList.length === 0) {
-                    console.log('[API] Nenhuma tabela retornada, usando configurações do site');
-                    tablesList = Object.entries(this.config.tables).map(([key, table]) => ({
-                        id: table.id,
-                        name: table.name,
-                        database_id: this.config.databaseId,
-                        key: key
-                    }));
-                }
-
-                console.log(`[API] ${tablesList.length} tabelas carregadas com sucesso`);
-                return tablesList;
-            } catch (error) {
-                console.log(`[API] Falhou endpoint ${endpoint}:`, error.message);
-                lastError = error;
-                continue;
-            }
-        }
-
-        // Se chegou aqui, todos os endpoints falharam
-        console.log('[API] Todos os endpoints falharam, usando configurações como fallback');
-        
-        // Como último recurso, retorna as tabelas das configurações
-        const fallbackTables = Object.entries(this.config.tables).map(([key, table]) => ({
-            id: table.id,
-            name: table.name,
-            database_id: this.config.databaseId,
-            key: key
-        }));
-
-        if (fallbackTables.length > 0) {
-            console.log(`[API] Usando ${fallbackTables.length} tabelas das configurações como fallback`);
-            return fallbackTables;
-        }
-
-        throw new Error(`Não foi possível carregar tabelas. Último erro: ${lastError?.message || 'Erro desconhecido'}`);
-=======
     async testConnection() {
         if (!this.config.apiUrl || !this.token) {
             return { success: false, error: 'API URL e Token são obrigatórios.' };
@@ -409,7 +276,6 @@ class BaserowAPI {
         ];
 
         return tables.filter(t => t.id); // Retorna apenas as tabelas que têm um ID configurado
->>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
     }
 
     // Carregar campos de uma tabela

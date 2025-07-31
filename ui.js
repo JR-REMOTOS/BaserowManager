@@ -20,13 +20,7 @@ class UIManager {
     // Inicializar interface
     init() {
         this.setupEventListeners();
-<<<<<<< HEAD
-        this.renderSiteSelector();
         this.showEmptyState();
-        this.loadSavedConfig();
-=======
-        this.showEmptyState();
->>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
         this.setupM3UIntegration();
     }
 
@@ -174,97 +168,11 @@ class UIManager {
         }
     }
 
-<<<<<<< HEAD
-    // Renderizar seletor de site
-    renderSiteSelector() {
-        const siteSelector = document.getElementById('siteSelector');
-        if (!siteSelector) return;
-
-        const options = Object.entries(BASEROW_CONFIGS).map(([key, config]) => 
-            `<option value="${key}">${config.name}</option>`
-        ).join('');
-
-        siteSelector.innerHTML = '<option value="">Selecione um site...</option>' + options;
-        siteSelector.addEventListener('change', (e) => this.handleSiteChange(e.target.value));
-    }
-
-    // Tratar mudança de site
-    async handleSiteChange(siteName) {
-        try {
-            this.api.setSite(siteName);
-            this.selectedTable = null;
-            this.currentRecords = [];
-            
-            this.updateSiteInfo();
-            this.showEmptyState();
-            this.clearTablesList();
-            this.hideRecordForm();
-
-            this.showAlert(`Site alterado para: ${BASEROW_CONFIGS[siteName].name}`, 'info');
-        } catch (error) {
-            this.showAlert('Erro ao alterar site: ' + error.message, 'danger');
-        }
-    }
-
-    // Atualizar informações do site
-    updateSiteInfo() {
-        const config = this.api.getCurrentConfig();
-        const siteInfo = document.getElementById('siteInfo');
-        
-        if (siteInfo) {
-            const connectionStatus = config.isConnected ? '🟢 Conectado' : '🔴 Desconectado';
-            const m3uStatus = this.isM3UActive ? ' | 📺 M3U Ativo' : '';
-            
-            siteInfo.innerHTML = `
-                <small class="text-white-50">
-                    ${config.config?.name || 'Não configurado'} | 
-                    ${connectionStatus}${m3uStatus}
-                </small>
-            `;
-        }
-
-        // Atualizar info na configuração
-        this.updateConfigInfo();
-    }
-
-    // Atualizar informações na configuração
-    updateConfigInfo() {
-        const config = this.api.getCurrentConfig();
-        const infoDiv = document.querySelector('.config-info');
-        
-        if (infoDiv) {
-            const tablesList = config.config ? Object.keys(config.config.tables).join(', ') : 'Nenhuma';
-            
-            infoDiv.innerHTML = `
-                <h6><i class="fas fa-info-circle me-2"></i>Informações do Site Atual:</h6>
-                <ul class="mb-2">
-                    <li><strong>Site:</strong> ${config.config?.name || 'Não configurado'}</li>
-                    <li><strong>URL da API:</strong> ${config.config?.apiUrl || 'Não configurado'}</li>
-                    <li><strong>Database ID:</strong> ${config.config?.databaseId || 'Não configurado'}</li>
-                    <li><strong>Tabelas:</strong> ${tablesList}</li>
-                    <li><strong>M3U Manager:</strong> ${this.isM3UActive ? '✅ Ativo' : '⭕ Inativo'}</li>
-                </ul>
-            `;
-        }
-    }
-=======
->>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
-
     // Mostrar/ocultar configuração
     toggleConfig() {
         const panel = document.getElementById('configPanel');
         if (panel) {
-<<<<<<< HEAD
-            const isVisible = panel.style.display !== 'none';
-            panel.style.display = isVisible ? 'none' : 'block';
-            
-            if (!isVisible) {
-                this.updateConfigInfo();
-                this.fillConfigForm();
-            }
-=======
             panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
->>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
         }
     }
 
@@ -275,39 +183,10 @@ class UIManager {
         }
     }
 
-<<<<<<< HEAD
-    // Preencher formulário de configuração
-    fillConfigForm() {
-        const config = this.api.getCurrentConfig();
-        
-        const apiUrlInput = document.getElementById('apiUrl');
-        const databaseIdInput = document.getElementById('databaseId');
-        
-        if (apiUrlInput && config.config) {
-            apiUrlInput.value = config.config.apiUrl;
-        }
-        
-        if (databaseIdInput && config.config) {
-            databaseIdInput.value = config.config.databaseId;
-        }
-    }
-
-    // Teste rápido
-    quickTest() {
-        const config = this.api.getCurrentConfig();
-        if (!config.config) {
-            this.showAlert('Selecione um site primeiro', 'warning');
-            return;
-        }
-
-        // Preencher campos automaticamente
-        this.fillConfigForm();
-=======
     // Teste rápido
     quickTest() {
         // Esta função pode ser adaptada ou removida, já que não há mais "sites" pré-configurados.
         // Por enquanto, ela apenas focará no campo de token.
->>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
         
         // Destacar campo de token
         const tokenField = document.getElementById('apiToken');
@@ -325,79 +204,6 @@ class UIManager {
         this.showAlert('⚡ Configurações preenchidas! Cole seu token e clique em "Testar Conexão"', 'info');
     }
 
-<<<<<<< HEAD
-    // Testar conexão
-    async testConnection() {
-        const apiUrl = document.getElementById('apiUrl')?.value?.trim();
-        const token = document.getElementById('apiToken')?.value?.trim();
-        const databaseId = document.getElementById('databaseId')?.value?.trim();
-
-        if (!apiUrl || !token) {
-            this.showAlert('Preencha a URL da API e o token', 'warning');
-            return;
-        }
-
-        if (!FIELD_VALIDATIONS.url.test(apiUrl)) {
-            this.showAlert('URL deve começar com http:// ou https://', 'warning');
-            return;
-        }
-
-        this.showProgress('Testando Conexão', 'Verificando credenciais...');
-
-        try {
-            // Configurar API
-            const currentSite = this.api.currentSite;
-            const config = { ...BASEROW_CONFIGS[currentSite] };
-            config.apiUrl = apiUrl;
-            if (databaseId) config.databaseId = databaseId;
-
-            this.api.config = config;
-            this.api.setToken(token);
-
-            this.updateProgress(30, 'Testando acesso à API...');
-
-            // Testar conexão
-            const result = await this.api.testConnection();
-            
-            this.updateProgress(70, 'Carregando tabelas...');
-
-            if (result.success) {
-                // Carregar tabelas
-                const tables = await this.api.loadTables();
-                
-                this.updateProgress(100, 'Conexão estabelecida!');
-                
-                setTimeout(() => {
-                    this.hideProgress();
-                    this.renderTables(tables);
-                    this.updateSiteInfo();
-                    this.saveConfig();
-                    this.hideConfig();
-                    
-                    const expectedCount = Object.keys(BASEROW_CONFIGS[currentSite].tables).length;
-                    const foundCount = tables.length;
-                    
-                    if (foundCount >= expectedCount) {
-                        this.showAlert(`✅ Conectado com sucesso! ${foundCount} tabelas encontradas.`, 'success');
-                        
-                        // Se M3U está ativo, mostrar dica
-                        if (this.isM3UActive) {
-                            setTimeout(() => {
-                                this.showAlert('💡 Agora você pode importar dados M3U para suas tabelas!', 'info');
-                            }, 2000);
-                        }
-                    } else {
-                        this.showAlert(`⚠️ Conectado, mas apenas ${foundCount} de ${expectedCount} tabelas esperadas foram encontradas.`, 'warning');
-                    }
-                }, 1000);
-            } else {
-                this.hideProgress();
-                this.showAlert('Erro na conexão: ' + result.error, 'danger');
-            }
-        } catch (error) {
-            this.hideProgress();
-            this.showAlert('Erro na conexão: ' + error.message, 'danger');
-=======
     populateMappingDropdowns(fields, type, savedMapping = {}) {
         const container = document.getElementById(`${type}MappingContainer`);
         if (!container) return;
@@ -405,12 +211,12 @@ class UIManager {
         const mappingFields = [
             'Nome', 'Capa', 'Categoria', 'Sinopse', 'Link', 'Tipo', 'Idioma', 
             'Background', 'Nota', 'Temporadas', 'Tempo', 'Valor', 'Tipo Conteudo', 
-            'Meu', 'Destaque', 'Data de Lançamento', 'View', 'TMDB', 'Episódio'
+            'Meu', 'Destaque', 'Data de Lançamento', 'Views', 'TMDB', 'Episódio'
         ];
 
         let html = '';
         mappingFields.forEach(fieldName => {
-            if ((type === 'conteudos' && fieldName === 'Episódio') || (type === 'episodios' && fieldName === 'Temporadas')) {
+            if (type === 'conteudos' && fieldName === 'Episódio') {
                 return;
             }
 
@@ -420,7 +226,7 @@ class UIManager {
                         <label class="form-label text-white-50 small">${fieldName}</label>
                         <select class="form-select form-select-sm" data-mapping="${type}" name="${fieldName}">
                             <option value="">Não mapear</option>
-                            ${fields.map(f => `<option value="field_${f.id}" ${savedValue === `field_${f.id}` ? 'selected' : ''}>${f.name}</option>`).join('')}
+                            ${fields.map(f => `<option value="${f.name}" ${savedValue === f.name ? 'selected' : ''}>${f.name}</option>`).join('')}
                         </select>
                      </div>`;
         });
@@ -492,7 +298,6 @@ class UIManager {
         } else {
             this.hideProgress();
             this.showAlert(`Erro na conexão: ${result.error}`, 'danger');
->>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
         }
     }
 
@@ -897,66 +702,6 @@ class UIManager {
 
     // Salvar configuração
     async saveConfig() {
-<<<<<<< HEAD
-        const token = localStorage.getItem('authToken');
-        if (!token) return;
-
-        const baserowConfig = {
-            apiUrl: document.getElementById('apiUrl')?.value?.trim(),
-            apiToken: document.getElementById('apiToken')?.value?.trim(),
-            databaseId: document.getElementById('databaseId')?.value?.trim()
-        };
-
-        const m3uConfig = {
-            xtreamBaseUrl: document.getElementById('xtreamBaseUrl')?.value?.trim(),
-            xtreamUsername: document.getElementById('xtreamUsername')?.value?.trim(),
-            xtreamPassword: document.getElementById('xtreamPassword')?.value?.trim()
-        };
-
-        try {
-            await APIUtils.fetchWithAuth('http://localhost:3000/api/config', {
-                method: 'POST',
-                body: JSON.stringify({ baserow: baserowConfig, m3u: m3uConfig })
-            });
-            this.showAlert('Configuração salva no servidor com sucesso!', 'success');
-        } catch (error) {
-            console.error('Erro ao salvar configuração no servidor:', error);
-            this.showAlert('Não foi possível salvar a configuração no servidor.', 'danger');
-        }
-    }
-
-    // Carregar configuração salva
-    async loadSavedConfig() {
-        const token = localStorage.getItem('authToken');
-        if (!token) return;
-
-        try {
-            const response = await APIUtils.fetchWithAuth('http://localhost:3000/api/config');
-
-            if (response.ok) {
-                const config = await response.json();
-                
-                // Preencher campos do Baserow
-                if (config.baserow) {
-                    document.getElementById('apiUrl').value = config.baserow.apiUrl || '';
-                    document.getElementById('apiToken').value = config.baserow.apiToken || '';
-                    document.getElementById('databaseId').value = config.baserow.databaseId || '';
-                }
-
-                // Preencher campos do M3U
-                if (config.m3u) {
-                    document.getElementById('xtreamBaseUrl').value = config.m3u.xtreamBaseUrl || '';
-                    document.getElementById('xtreamUsername').value = config.m3u.xtreamUsername || '';
-                    document.getElementById('xtreamPassword').value = config.m3u.xtreamPassword || '';
-                }
-
-                this.showAlert('Configurações carregadas do servidor.', 'info');
-            }
-        } catch (error) {
-            console.error('Erro ao carregar configuração do servidor:', error);
-            this.showAlert('Não foi possível carregar as configurações do servidor.', 'warning');
-        }
-=======
         if (window.app && typeof window.app.saveUserConfig === 'function') {
             await window.app.saveUserConfig();
         } else {
@@ -972,7 +717,6 @@ class UIManager {
     async loadSavedConfig() {
         // Esta função foi movida para main.js (loadUserConfig)
         // e é chamada na inicialização do app.
->>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
     }
 
     // Implementar funções restantes de CRUD, paginação, etc.
