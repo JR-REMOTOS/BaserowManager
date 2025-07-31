@@ -746,6 +746,24 @@ class BaserowManager {
 
                 this.ui.showAlert('Configurações do usuário carregadas.', 'info');
 
+                // Popula a instância da API com a configuração carregada
+                this.api.setConfig({
+                    apiUrl: config.baserow_api_url,
+                    token: config.baserow_api_token,
+                    conteudosTableId: config.conteudos_table_id,
+                    categoriasTableId: config.categorias_table_id,
+                    episodiosTableId: config.episodios_table_id,
+                    usuariosTableId: config.usuarios_table_id,
+                    bannersTableId: config.banners_table_id,
+                    canaisTableId: config.canais_table_id,
+                    pagamentosTableId: config.pagamentos_table_id,
+                    planosTableId: config.planos_table_id,
+                    tvCategoriaTableId: config.tv_categoria_table_id,
+                    mapping_conteudos: JSON.parse(config.mapping_conteudos || '{}'),
+                    mapping_episodios: JSON.parse(config.mapping_episodios || '{}')
+                });
+
+
                 // Se não houver token, abrir o painel de configuração
                 if (!config.baserow_api_token) {
                     this.ui.showAlert('Bem-vindo! Por favor, configure sua conexão Baserow.', 'info');

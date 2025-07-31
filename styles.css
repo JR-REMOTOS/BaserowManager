@@ -596,3 +596,9 @@ button {
         background: #fff !important;
     }
 }
+
+/* Fix para inputs de mapeamento no painel de configuração */
+#configPanel .tab-content input.form-control {
+    background-color: #fff !important;
+    color: #212529 !important;
+}
