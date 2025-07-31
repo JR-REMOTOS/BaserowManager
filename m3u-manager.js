@@ -891,17 +891,14 @@ class M3UManager {
                         </ul>
                         <div class="tab-content" id="m3uTabContent">
                             <div class="tab-pane fade show active" id="movies" role="tabpanel">
-                                ${this.renderMovies()}
-                                ${stats.movies > this.batchSize ? `<button class="btn btn-outline-primary w-100 mt-3" id="loadMoreMovies">Carregar Mais Filmes</button>` : ''}
+                                <div class="text-center py-5"><i class="fas fa-spinner fa-spin fa-2x"></i><p class="mt-2">Carregando filmes...</p></div>
                             </div>
                             <div class="tab-pane fade" id="series" role="tabpanel">
-                                ${this.renderSeries()}
-                                ${stats.series > this.batchSize ? `<button class="btn btn-outline-primary w-100 mt-3" id="loadMoreSeries">Carregar Mais Séries</button>` : ''}
+                                <div class="text-center py-5"><i class="fas fa-spinner fa-spin fa-2x"></i><p class="mt-2">Carregando séries...</p></div>
                             </div>
                             ${showChannelsTab ? `
                             <div class="tab-pane fade" id="channels" role="tabpanel">
-                                ${this.renderChannels()}
-                                ${stats.channels > this.batchSize ? `<button class="btn btn-outline-primary w-100 mt-3" id="loadMoreChannels">Carregar Mais Canais</button>` : ''}
+                                <div class="text-center py-5"><i class="fas fa-spinner fa-spin fa-2x"></i><p class="mt-2">Carregando canais...</p></div>
                             </div>
                             ` : ''}
                         </div>
@@ -911,7 +908,42 @@ class M3UManager {
         `;
 
         container.innerHTML = html;
-        console.log('[M3U] HTML renderizado (primeiros 1000 caracteres):', html.substring(0, 1000));
+        console.log('[M3U] Shell de conteúdo renderizado.');
+
+        // Renderizar conteúdo das abas de forma assíncrona
+        setTimeout(() => {
+            const moviesTab = document.querySelector('#movies');
+            if (moviesTab) {
+                moviesTab.innerHTML = `
+                    ${this.renderMovies()}
+                    ${stats.movies > this.batchSize ? `<button class="btn btn-outline-primary w-100 mt-3" id="loadMoreMovies">Carregar Mais Filmes</button>` : ''}
+                `;
+            }
+        }, 10); // Pequeno delay para permitir a renderização do shell
+
+        setTimeout(() => {
+            const seriesTab = document.querySelector('#series');
+            if (seriesTab) {
+                seriesTab.innerHTML = `
+                    ${this.renderSeries()}
+                    ${stats.series > this.batchSize ? `<button class="btn btn-outline-primary w-100 mt-3" id="loadMoreSeries">Carregar Mais Séries</button>` : ''}
+                `;
+            }
+        }, 20); // Delay um pouco maior para a segunda aba
+
+        if (showChannelsTab) {
+            setTimeout(() => {
+                const channelsTab = document.querySelector('#channels');
+                if (channelsTab) {
+                    channelsTab.innerHTML = `
+                        ${this.renderChannels()}
+                        ${stats.channels > this.batchSize ? `<button class="btn btn-outline-primary w-100 mt-3" id="loadMoreChannels">Carregar Mais Canais</button>` : ''}
+                    `;
+                }
+            }, 30);
+        }
+
+        console.log('[M3U] Renderização de conteúdo agendada.');
 
         // Forçar visibilidade do container
         container.style.display = 'block';
