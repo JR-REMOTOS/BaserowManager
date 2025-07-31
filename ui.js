@@ -211,12 +211,12 @@ class UIManager {
         const mappingFields = [
             'Nome', 'Capa', 'Categoria', 'Sinopse', 'Link', 'Tipo', 'Idioma',
             'Background', 'Nota', 'Temporadas', 'Tempo', 'Valor', 'Tipo Conteudo',
-            'Meu', 'Destaque', 'Data de Lançamento', 'View', 'TMDB', 'Episódio'
+            'Meu', 'Destaque', 'Data de Lançamento', 'Views', 'TMDB', 'Episódio'
         ];
 
         let html = '';
         mappingFields.forEach(fieldName => {
-            if ((type === 'conteudos' && fieldName === 'Episódio') || (type === 'episodios' && fieldName === 'Temporadas')) {
+            if (type === 'conteudos' && fieldName === 'Episódio') {
                 return;
             }
 
