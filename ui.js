@@ -198,6 +198,15 @@ class UIManager {
         }
     }
 
+    fillMappingForm(mapping, type) {
+        if (!mapping) return;
+        document.querySelectorAll(`[data-mapping="${type}"]`).forEach(input => {
+            if (mapping[input.name]) {
+                input.value = mapping[input.name];
+            }
+        });
+    }
+
     // Teste rápido
     quickTest() {
         // Esta função pode ser adaptada ou removida, já que não há mais "sites" pré-configurados.

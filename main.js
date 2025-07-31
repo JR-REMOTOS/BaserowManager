@@ -735,8 +735,7 @@ class BaserowManager {
 
                 this.ui.showAlert('Configurações do usuário carregadas.', 'info');
 
-                // Popula a instância da API com a configuração carregada
-                this.api.setConfig({
+                const apiConfig = {
                     apiUrl: config.baserow_api_url,
                     token: config.baserow_api_token,
                     conteudosTableId: config.conteudos_table_id,
@@ -749,9 +748,13 @@ class BaserowManager {
                     planosTableId: config.planos_table_id,
                     tvCategoriaTableId: config.tv_categoria_table_id,
                     mapping_conteudos: JSON.parse(config.mapping_conteudos || '{}'),
+                    mapping_conteudos: JSON.parse(config.mapping_conteudos || '{}'),
                     mapping_episodios: JSON.parse(config.mapping_episodios || '{}')
-                });
+                };
+                this.api.setConfig(apiConfig);
 
+                // Preenche os campos do formulário de mapeamento
+                this.ui.fillMappingForm(apiConfig.mapping_conteudos, 'conteudos');
 
                 // Se não houver token, abrir o painel de configuração
                 if (!config.baserow_api_token) {
