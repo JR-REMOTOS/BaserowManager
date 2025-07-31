@@ -29,6 +29,7 @@ try {
         m3u_url TEXT,
         m3u_username TEXT,
         m3u_password TEXT,
+        mapping_completed BOOLEAN DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE

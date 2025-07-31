@@ -29,6 +29,16 @@ $m3u_url = $data['m3u_url'] ?? null;
 $m3u_username = $data['m3u_username'] ?? null;
 $m3u_password = $data['m3u_password'] ?? null;
 
+// Determinar se o mapeamento está completo
+$mapping_completed = 0;
+if (
+    !empty($data['mapping_conteudos']) && is_array($data['mapping_conteudos']) && count($data['mapping_conteudos']) > 0 &&
+    !empty($data['mapping_episodios']) && is_array($data['mapping_episodios']) && count($data['mapping_episodios']) > 0
+) {
+    $mapping_completed = 1;
+}
+
+
 try {
     // Verificar se já existe uma configuração para este usuário
     $stmt = $conn->prepare("SELECT id FROM user_configs WHERE user_id = :user_id");
@@ -54,15 +64,16 @@ try {
             m3u_url = :m3u_url,
             m3u_username = :m3u_username,
             m3u_password = :m3u_password,
+            mapping_completed = :mapping_completed,
             updated_at = CURRENT_TIMESTAMP
             WHERE user_id = :user_id
         ");
     } else {
         // Inserir nova configuração
         $stmt = $conn->prepare("INSERT INTO user_configs 
-            (user_id, baserow_api_url, baserow_api_token, conteudos_table_id, categorias_table_id, episodios_table_id, banners_table_id, usuarios_table_id, canais_table_id, pagamentos_table_id, planos_table_id, tv_categoria_table_id, mapping_conteudos, mapping_episodios, m3u_url, m3u_username, m3u_password) 
+            (user_id, baserow_api_url, baserow_api_token, conteudos_table_id, categorias_table_id, episodios_table_id, banners_table_id, usuarios_table_id, canais_table_id, pagamentos_table_id, planos_table_id, tv_categoria_table_id, mapping_conteudos, mapping_episodios, m3u_url, m3u_username, m3u_password, mapping_completed)
             VALUES 
-            (:user_id, :baserow_api_url, :baserow_api_token, :conteudos_table_id, :categorias_table_id, :episodios_table_id, :banners_table_id, :usuarios_table_id, :canais_table_id, :pagamentos_table_id, :planos_table_id, :tv_categoria_table_id, :mapping_conteudos, :mapping_episodios, :m3u_url, :m3u_username, :m3u_password)
+            (:user_id, :baserow_api_url, :baserow_api_token, :conteudos_table_id, :categorias_table_id, :episodios_table_id, :banners_table_id, :usuarios_table_id, :canais_table_id, :pagamentos_table_id, :planos_table_id, :tv_categoria_table_id, :mapping_conteudos, :mapping_episodios, :m3u_url, :m3u_username, :m3u_password, :mapping_completed)
         ");
     }
 
@@ -83,7 +94,8 @@ try {
         ':mapping_episodios' => $mapping_episodios,
         ':m3u_url' => $m3u_url,
         ':m3u_username' => $m3u_username,
-        ':m3u_password' => $m3u_password
+        ':m3u_password' => $m3u_password,
+        ':mapping_completed' => $mapping_completed
     ]);
 
     echo json_encode(['success' => true, 'message' => 'Configurações salvas com sucesso.']);

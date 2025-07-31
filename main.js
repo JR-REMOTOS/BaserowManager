@@ -767,15 +767,14 @@ class BaserowManager {
                     this.ui.showAlert('Bem-vindo! Por favor, configure sua conexão Baserow.', 'info');
                     this.ui.toggleConfig();
                 }
+
+                // Verificar o status do mapeamento e atualizar a UI
+                this.updateUIMappingStatus(config.mapping_completed == 1);
+
             } else {
-                // Se não houver dados de configuração, abrir o painel
+                // Se não houver dados de configuração, abrir o painel e desabilitar os botões
                 this.ui.showAlert('Bem-vindo! Por favor, configure sua conexão Baserow.', 'info');
-                this.ui.toggleConfig();
-            }
-            
-            // Habilitar botões de envio no M3U Manager agora que a configuração está pronta
-            if(this.m3uManager) {
-                this.m3uManager.updateSendButtonsState(true);
+                this.updateUIMappingStatus(false);
             }
         } catch (error) {
             console.error('[App] Erro ao carregar configurações do usuário:', error);
@@ -833,12 +832,40 @@ class BaserowManager {
 
             if (result.success) {
                 this.ui.showAlert('Configurações salvas no servidor.', 'success');
+                // Atualizar o status do mapeamento na UI
+                const isCompleted = Object.keys(mappingConteudos).length > 0 && Object.keys(mappingEpisodios).length > 0;
+                this.updateUIMappingStatus(isCompleted);
             } else {
                 this.ui.showAlert('Erro ao salvar configurações no servidor.', 'danger');
             }
         } catch (error) {
             console.error('[App] Erro ao salvar configurações do usuário:', error);
             this.ui.showAlert('Erro ao salvar configurações do usuário.', 'danger');
+        }
+    }
+
+    /**
+     * Updates the UI based on whether the mapping is completed.
+     * @param {boolean} isCompleted
+     */
+    updateUIMappingStatus(isCompleted) {
+        if (isCompleted) {
+            this.ui.showAlert('Mapeamento carregado. Você pode adicionar conteúdo.', 'success');
+            if (this.m3uManager) {
+                this.m3uManager.updateSendButtonsState(true);
+            }
+        } else {
+            this.ui.showAlert('Por favor, complete a configuração e o mapeamento de campos para habilitar o envio de conteúdo.', 'warning');
+            if (this.m3uManager) {
+                this.m3uManager.updateSendButtonsState(false);
+            }
+            // Atrasar a abertura do painel de configuração para que o usuário possa ler o alerta
+            setTimeout(() => {
+                const configPanel = document.getElementById('configPanel');
+                if (configPanel.style.display === 'none') {
+                    this.ui.toggleConfig();
+                }
+            }, 1000);
         }
     }
 
