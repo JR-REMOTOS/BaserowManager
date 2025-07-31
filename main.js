@@ -762,13 +762,11 @@ class BaserowManager {
                     this.ui.populateMappingDropdowns(fields, 'episodios', apiConfig.mapping_episodios);
                 }
 
-                // Auto-conectar se as credenciais estiverem salvas
+                // Auto-conectar se as credenciais estiverem salvas, APÓS o mapeamento ser carregado
                 if (config.baserow_api_url && config.baserow_api_token) {
-                    this.ui.showAlert('Conectando automaticamente com as configurações salvas...', 'info');
-                    // Usar um pequeno timeout para permitir que a UI seja atualizada antes de iniciar o teste de conexão
-                    setTimeout(() => {
-                        this.ui.testConnection();
-                    }, 500);
+                    this.ui.showAlert('Configurações carregadas. Conectando automaticamente...', 'info');
+                    // Não é mais necessário o timeout, pois as operações async de mapeamento já foram concluídas
+                    this.ui.testConnection();
                 } else {
                     // Se não houver token, abrir o painel de configuração
                     this.ui.showAlert('Bem-vindo! Por favor, configure sua conexão Baserow.', 'info');

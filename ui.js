@@ -282,15 +282,9 @@ class UIManager {
             const tables = this.api.loadTables();
             this.renderTables(tables);
 
-            // Carregar campos e popular dropdowns
-            if (config.conteudosTableId) {
-                const fields = await this.api.loadTableFields(config.conteudosTableId);
-                this.populateMappingDropdowns(fields, 'conteudos', config.mapping_conteudos);
-            }
-            if (config.episodiosTableId) {
-                const fields = await this.api.loadTableFields(config.episodiosTableId);
-                this.populateMappingDropdowns(fields, 'episodios', config.mapping_episodios || {});
-            }
+            // A lógica de carregar campos e popular dropdowns agora é tratada
+            // em main.js antes desta função ser chamada no fluxo automático,
+            // e os valores já estão na tela para o teste manual.
             
             this.hideProgress();
             this.hideConfig();
