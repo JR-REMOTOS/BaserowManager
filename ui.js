@@ -236,19 +236,21 @@ class UIManager {
 
     async testConnection() {
         const mappingConteudos = {};
-        document.querySelectorAll('[data-mapping="conteudos"]').forEach(input => {
-            if (input.value) {
-                mappingConteudos[input.name] = input.value;
+        document.querySelectorAll('[data-mapping="conteudos"] select').forEach(select => {
+            if (select.value) {
+                mappingConteudos[select.name] = select.value;
             }
         });
 
         const mappingEpisodios = {};
-        document.querySelectorAll('[data-mapping="episodios"]').forEach(input => {
-            if (input.value) {
-                mappingEpisodios[input.name] = input.value;
+        document.querySelectorAll('[data-mapping="episodios"] select').forEach(select => {
+            if (select.value) {
+                mappingEpisodios[select.name] = select.value;
             }
         });
 
+        // Construir a configuração lendo os valores do formulário,
+        // mas mesclando com os mapeamentos já carregados para garantir que não se percam.
         const config = {
             apiUrl: document.getElementById('apiUrl')?.value?.trim(),
             token: document.getElementById('apiToken')?.value?.trim(),
@@ -261,8 +263,10 @@ class UIManager {
             pagamentosTableId: document.getElementById('pagamentosTableId')?.value?.trim(),
             planosTableId: document.getElementById('planosTableId')?.value?.trim(),
             tvCategoriaTableId: document.getElementById('tvCategoriaTableId')?.value?.trim(),
-            mapping_conteudos: mappingConteudos,
-            mapping_episodios: mappingEpisodios
+            // Mesclar mapeamentos: os do DOM (se o usuário mudou) têm precedência,
+            // mas os carregados (this.api.config) servem como base.
+            mapping_conteudos: { ...(this.api.config.mapping_conteudos || {}), ...mappingConteudos },
+            mapping_episodios: { ...(this.api.config.mapping_episodios || {}), ...mappingEpisodios }
         };
 
         if (!config.apiUrl || !config.token) {
