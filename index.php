@@ -358,7 +358,7 @@
                             <div class="tab-pane fade" id="episodios-mapping" role="tabpanel">
                                <div class="row" id="episodiosMappingContainer">
                                    <!-- Os selects serão populados dinamicamente pelo JS -->
-                                   <p class="text-white-50">Conecte-se para carregar os campos da tabela.</p>
+                                   <p class="text-white-50">Conecte-se e forneça o ID da tabela de episódios para carregar os campos.</p>
                                </div>
                             </div>
                         </div>

@@ -755,6 +755,7 @@ class BaserowManager {
 
                 // Preenche os campos do formulário de mapeamento
                 this.ui.fillMappingForm(apiConfig.mapping_conteudos, 'conteudos');
+                this.ui.fillMappingForm(apiConfig.mapping_episodios, 'episodios');
 
                 // Se não houver token, abrir o painel de configuração
                 if (!config.baserow_api_token) {
@@ -789,6 +790,13 @@ class BaserowManager {
                 }
             });
 
+            const mappingEpisodios = {};
+            document.querySelectorAll('[data-mapping="episodios"] select').forEach(select => {
+                if (select.value) {
+                    mappingEpisodios[select.name] = select.value;
+                }
+            });
+
             const data = {
                 baserow_api_url: document.getElementById('apiUrl').value,
                 baserow_api_token: document.getElementById('apiToken').value,
@@ -802,7 +810,7 @@ class BaserowManager {
                 planos_table_id: document.getElementById('planosTableId').value,
                 tv_categoria_table_id: document.getElementById('tvCategoriaTableId').value,
                 mapping_conteudos: mappingConteudos,
-                // Adicionar mapping_episodios aqui quando implementado
+                mapping_episodios: mappingEpisodios,
                 m3u_url: document.getElementById('xtreamBaseUrl').value,
                 m3u_username: document.getElementById('xtreamUsername').value,
                 m3u_password: document.getElementById('xtreamPassword').value

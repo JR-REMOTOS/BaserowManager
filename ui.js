@@ -244,7 +244,7 @@ class UIManager {
                 return;
             }
 
-            const savedValue = savedMapping[fieldName] || '';
+            const savedValue = (savedMapping && savedMapping[fieldName]) ? savedMapping[fieldName] : '';
 
             html += `<div class="col-md-4 mb-3">
                         <label class="form-label text-white-50 small">${fieldName}</label>
