@@ -752,9 +752,15 @@ class BaserowManager {
                 };
                 this.api.setConfig(apiConfig);
 
-                // Preenche os campos do formulário de mapeamento
-                this.ui.fillMappingForm(apiConfig.mapping_conteudos, 'conteudos');
-                this.ui.fillMappingForm(apiConfig.mapping_episodios, 'episodios');
+                // Preencher os dropdowns de mapeamento com os campos corretos
+                if (apiConfig.conteudosTableId) {
+                    const fields = await this.api.loadTableFields(apiConfig.conteudosTableId);
+                    this.ui.populateMappingDropdowns(fields, 'conteudos', apiConfig.mapping_conteudos);
+                }
+                if (apiConfig.episodiosTableId) {
+                    const fields = await this.api.loadTableFields(apiConfig.episodiosTableId);
+                    this.ui.populateMappingDropdowns(fields, 'episodios', apiConfig.mapping_episodios);
+                }
 
                 // Se não houver token, abrir o painel de configuração
                 if (!config.baserow_api_token) {

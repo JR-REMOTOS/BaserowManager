@@ -602,3 +602,7 @@ button {
     background-color: #fff !important;
     color: #212529 !important;
 }
+
+#mappingTabsContent .form-label {
+    color: #212529 !important; /* Cor preta para as etiquetas */
+}

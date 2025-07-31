@@ -173,21 +173,7 @@ class UIManager {
     toggleConfig() {
         const panel = document.getElementById('configPanel');
         if (panel) {
-            const isVisible = panel.style.display !== 'none';
-            panel.style.display = isVisible ? 'none' : 'block';
-
-            if (!isVisible) {
-                // Preencher mapeamentos quando o painel for aberto
-                const config = window.app?.api.config;
-                if (config && config.mapping_conteudos) {
-                    const mapping = config.mapping_conteudos;
-                     document.querySelectorAll('[data-mapping="conteudos"]').forEach(input => {
-                        if (mapping[input.name]) {
-                            input.value = mapping[input.name];
-                        }
-                    });
-                }
-            }
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
         }
     }
 
@@ -196,15 +182,6 @@ class UIManager {
         if (panel) {
             panel.style.display = 'none';
         }
-    }
-
-    fillMappingForm(mapping, type) {
-        if (!mapping) return;
-        document.querySelectorAll(`[data-mapping="${type}"]`).forEach(input => {
-            if (mapping[input.name]) {
-                input.value = mapping[input.name];
-            }
-        });
     }
 
     // Teste rápido
