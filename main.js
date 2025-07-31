@@ -728,17 +728,6 @@ class BaserowManager {
                 if (config.planos_table_id) document.getElementById('planosTableId').value = config.planos_table_id;
                 if (config.tv_categoria_table_id) document.getElementById('tvCategoriaTableId').value = config.tv_categoria_table_id;
 
-                // Preencher mapeamentos
-                if (config.mapping_conteudos) {
-                    const mapping = JSON.parse(config.mapping_conteudos);
-                    document.querySelectorAll('[data-mapping="conteudos"]').forEach(input => {
-                        if (mapping[input.name]) {
-                            input.value = mapping[input.name];
-                        }
-                    });
-                }
-                // (Adicionar lógica para episodios quando implementado)
-
                 // Preencher campos do M3U
                 if (config.m3u_url) document.getElementById('xtreamBaseUrl').value = config.m3u_url;
                 if (config.m3u_username) document.getElementById('xtreamUsername').value = config.m3u_username;

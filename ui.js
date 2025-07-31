@@ -175,6 +175,19 @@ class UIManager {
         if (panel) {
             const isVisible = panel.style.display !== 'none';
             panel.style.display = isVisible ? 'none' : 'block';
+
+            if (!isVisible) {
+                // Preencher mapeamentos quando o painel for aberto
+                const config = window.app?.api.config;
+                if (config && config.mapping_conteudos) {
+                    const mapping = config.mapping_conteudos;
+                     document.querySelectorAll('[data-mapping="conteudos"]').forEach(input => {
+                        if (mapping[input.name]) {
+                            input.value = mapping[input.name];
+                        }
+                    });
+                }
+            }
         }
     }
 
@@ -185,32 +198,10 @@ class UIManager {
         }
     }
 
-    // Preencher formulário de configuração
-    fillConfigForm() {
-        const config = this.api.getCurrentConfig();
-        
-        const apiUrlInput = document.getElementById('apiUrl');
-        const databaseIdInput = document.getElementById('databaseId');
-        
-        if (apiUrlInput && config.config) {
-            apiUrlInput.value = config.config.apiUrl;
-        }
-        
-        if (databaseIdInput && config.config) {
-            databaseIdInput.value = config.config.databaseId;
-        }
-    }
-
     // Teste rápido
     quickTest() {
-        const config = this.api.getCurrentConfig();
-        if (!config.config) {
-            this.showAlert('Selecione um site primeiro', 'warning');
-            return;
-        }
-
-        // Preencher campos automaticamente
-        this.fillConfigForm();
+        // Esta função pode ser adaptada ou removida, já que não há mais "sites" pré-configurados.
+        // Por enquanto, ela apenas focará no campo de token.
         
         // Destacar campo de token
         const tokenField = document.getElementById('apiToken');
@@ -265,7 +256,7 @@ class UIManager {
         if (result.success) {
             this.updateProgress(100, 'Conexão estabelecida!');
             this.showAlert(result.message, 'success');
-            
+
             const tables = this.api.loadTables();
             this.renderTables(tables);
 
