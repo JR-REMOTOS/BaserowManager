@@ -733,7 +733,7 @@ class BaserowManager {
                 if (config.m3u_username) document.getElementById('xtreamUsername').value = config.m3u_username;
                 if (config.m3u_password) document.getElementById('xtreamPassword').value = config.m3u_password;
                 
-                this.ui.showAlert('Configurações do usuário carregadas.', 'info');
+                this.ui.showAlert('Configurações do usuário carregadas.', 'info', 2000);
                 
                 const apiConfig = {
                     apiUrl: config.baserow_api_url,
@@ -752,18 +752,12 @@ class BaserowManager {
                 };
                 this.api.setConfig(apiConfig);
 
-                // Preencher os dropdowns de mapeamento com os campos corretos
-                if (apiConfig.conteudosTableId) {
-                    const fields = await this.api.loadTableFields(apiConfig.conteudosTableId);
-                    this.ui.populateMappingDropdowns(fields, 'conteudos', apiConfig.mapping_conteudos);
-                }
-                if (apiConfig.episodiosTableId) {
-                    const fields = await this.api.loadTableFields(apiConfig.episodiosTableId);
-                    this.ui.populateMappingDropdowns(fields, 'episodios', apiConfig.mapping_episodios);
-                }
-
-                // Se não houver token, abrir o painel de configuração
-                if (!config.baserow_api_token) {
+                // Se a configuração essencial existir, tenta fazer o teste de conexão automaticamente
+                if (apiConfig.apiUrl && apiConfig.token) {
+                    console.log('[App] Configuração encontrada. Tentando conexão automática...');
+                    await this.ui.testConnection(true); // true para modo automático/silencioso
+                } else {
+                    // Se não houver dados de configuração, abrir o painel
                     this.ui.showAlert('Bem-vindo! Por favor, configure sua conexão Baserow.', 'info');
                     this.ui.toggleConfig();
                 }

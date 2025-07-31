@@ -234,18 +234,18 @@ class UIManager {
         container.innerHTML = html;
     }
 
-    async testConnection() {
+    async testConnection(isAutomatic = false) {
         const mappingConteudos = {};
-        document.querySelectorAll('[data-mapping="conteudos"]').forEach(input => {
-            if (input.value) {
-                mappingConteudos[input.name] = input.value;
+        document.querySelectorAll('[data-mapping="conteudos"] select').forEach(select => {
+            if (select.value) {
+                mappingConteudos[select.name] = select.value;
             }
         });
 
         const mappingEpisodios = {};
-        document.querySelectorAll('[data-mapping="episodios"]').forEach(input => {
-            if (input.value) {
-                mappingEpisodios[input.name] = input.value;
+        document.querySelectorAll('[data-mapping="episodios"] select').forEach(select => {
+            if (select.value) {
+                mappingEpisodios[select.name] = select.value;
             }
         });
 
@@ -270,33 +270,43 @@ class UIManager {
             return;
         }
 
-        this.showProgress('Testando Conexão', 'Verificando credenciais e tabelas...');
+        if (!isAutomatic) {
+            this.showProgress('Testando Conexão', 'Verificando credenciais e tabelas...');
+        }
+
         this.api.setConfig(config);
 
         const result = await this.api.testConnection();
 
         if (result.success) {
-            this.updateProgress(100, 'Conexão estabelecida!');
-            this.showAlert(result.message, 'success');
+            if (!isAutomatic) {
+                this.updateProgress(100, 'Conexão estabelecida!');
+                this.showAlert(result.message, 'success');
+            }
             
             const tables = this.api.loadTables();
             this.renderTables(tables);
 
-            // Carregar campos e popular dropdowns
-            if (config.conteudosTableId) {
-                const fields = await this.api.loadTableFields(config.conteudosTableId);
-                this.populateMappingDropdowns(fields, 'conteudos', config.mapping_conteudos);
+            // Carregar campos e popular dropdowns de mapeamento
+            const apiConfig = this.api.getConfig();
+            if (apiConfig.conteudosTableId) {
+                const fields = await this.api.loadTableFields(apiConfig.conteudosTableId);
+                this.populateMappingDropdowns(fields, 'conteudos', apiConfig.mapping_conteudos);
             }
-            if (config.episodiosTableId) {
-                const fields = await this.api.loadTableFields(config.episodiosTableId);
-                this.populateMappingDropdowns(fields, 'episodios', config.mapping_episodios || {});
+            if (apiConfig.episodiosTableId) {
+                const fields = await this.api.loadTableFields(apiConfig.episodiosTableId);
+                this.populateMappingDropdowns(fields, 'episodios', apiConfig.mapping_episodios || {});
             }
             
-            this.hideProgress();
-            this.hideConfig();
-            this.saveConfig();
+            if (!isAutomatic) {
+                this.hideProgress();
+            }
+            this.hideConfig(); // Esconde o painel de configuração após o sucesso
+            await this.saveConfig(); // Salva a configuração bem-sucedida
         } else {
-            this.hideProgress();
+            if (!isAutomatic) {
+                this.hideProgress();
+            }
             this.showAlert(`Erro na conexão: ${result.error}`, 'danger');
         }
     }
@@ -639,7 +649,7 @@ class UIManager {
         if (tableHeader) tableHeader.style.display = 'none';
     }
 
-    showAlert(message, type = 'info') {
+    showAlert(message, type = 'info', duration = 5000) {
         const alertDiv = document.createElement('div');
         alertDiv.className = `alert alert-${type} alert-custom alert-dismissible fade show`;
         alertDiv.innerHTML = `
@@ -652,7 +662,12 @@ class UIManager {
             mainContent.insertBefore(alertDiv, mainContent.firstChild);
         }
         
-        setTimeout(() => alertDiv.remove(), 5000);
+        if (duration > 0) {
+            setTimeout(() => {
+                alertDiv.classList.remove('show');
+                alertDiv.addEventListener('transitionend', () => alertDiv.remove());
+            }, duration);
+        }
     }
 
     showProgress(title, message) {
