@@ -2,47 +2,13 @@ import { BASEROW_CONFIGS, DEFAULT_CONFIG } from './config.js';
 
 class BaserowAPI {
     constructor() {
-<<<<<<< HEAD
-        this.currentSite = 'oficial'; // Site padrão
-        this.config = null;
-=======
         this.config = {};
->>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
         this.token = '';
         this.isConnected = false;
         this.retryCount = 0;
         this.readOnlyFields = new Set(['id', 'created_on', 'updated_on']); // Campos somente leitura
     }
 
-<<<<<<< HEAD
-    // Configurar site atual
-    setSite(siteName) {
-        if (!BASEROW_CONFIGS[siteName]) {
-            throw new Error(`Site '${siteName}' não encontrado nas configurações`);
-        }
-        this.currentSite = siteName;
-        this.config = BASEROW_CONFIGS[siteName];
-        this.isConnected = false;
-        return this;
-    }
-
-    // Configurar token
-    setToken(token) {
-        this.token = token.trim();
-        return this;
-    }
-
-    // Obter configuração atual
-    getCurrentConfig() {
-        return {
-            site: this.currentSite,
-            config: this.config,
-            token: this.token ? '***' + this.token.slice(-4) : '',
-            isConnected: this.isConnected
-        };
-    }
-
-=======
     // Configurar API
     setConfig(config) {
         this.config = {
@@ -64,20 +30,19 @@ class BaserowAPI {
     }
 
 
->>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
     // Filtrar campos somente leitura
     filterReadOnlyFields(data) {
         if (!data || typeof data !== 'object') return data;
-        
+
         const filteredData = {};
         for (const [key, value] of Object.entries(data)) {
             const fieldKey = key.toLowerCase();
-            const isReadOnly = this.readOnlyFields.has(fieldKey) || 
-                              fieldKey.includes('created') || 
+            const isReadOnly = this.readOnlyFields.has(fieldKey) ||
+                              fieldKey.includes('created') ||
                               fieldKey.includes('updated') ||
                               fieldKey.endsWith('_on') ||
                               fieldKey.endsWith('_at');
-            
+
             if (!isReadOnly) {
                 filteredData[key] = value;
             } else {
@@ -89,21 +54,12 @@ class BaserowAPI {
 
     // Fazer requisição HTTP
     async makeRequest(endpoint, options = {}) {
-<<<<<<< HEAD
-        if (!this.config) {
-            throw new Error('Nenhum site configurado. Use setSite() primeiro.');
-        }
-
-        if (!this.token) {
-            throw new Error('Token não configurado. Use setToken() primeiro.');
-=======
         if (!this.config.apiUrl || !this.token) {
             throw new Error('API não configurada. Use setConfig() primeiro.');
->>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
         }
 
         const url = `${this.config.apiUrl.replace(/\/$/, '')}/${endpoint.replace(/^\//, '')}`;
-        
+
         const defaultOptions = {
             headers: {
                 'Authorization': `Token ${this.token}`,
@@ -129,7 +85,7 @@ class BaserowAPI {
 
         try {
             console.log(`[API] ${requestOptions.method || 'GET'} ${url}`);
-            
+
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), requestOptions.timeout);
 
@@ -157,11 +113,11 @@ class BaserowAPI {
     async handleErrorResponse(response) {
         let errorMessage = `HTTP ${response.status}`;
         let errorDetail = '';
-        
+
         try {
             const errorData = await response.json();
             errorDetail = errorData.detail || errorData.error || errorData.description || '';
-            
+
             // Tratar erros específicos de campos
             if (errorData.error && typeof errorData.error === 'object') {
                 const fieldErrors = [];
@@ -176,7 +132,7 @@ class BaserowAPI {
                     errorDetail = fieldErrors.join('; ');
                 }
             }
-            
+
             errorMessage = errorDetail || errorMessage;
         } catch (e) {
             const errorText = await response.text();
@@ -233,14 +189,14 @@ class BaserowAPI {
     shouldRetry(error) {
         // Não retry para erros 4xx (client errors) exceto 429 (rate limit)
         if (error.message.includes('400') ||
-            error.message.includes('401') || 
-            error.message.includes('403') || 
+            error.message.includes('401') ||
+            error.message.includes('403') ||
             error.message.includes('404') ||
             error.message.includes('422')) {
             return false;
         }
-        
-        return error.message.includes('conexão') || 
+
+        return error.message.includes('conexão') ||
                error.message.includes('network') ||
                error.message.includes('timeout') ||
                error.message.includes('429'); // Rate limit
@@ -268,100 +224,11 @@ class BaserowAPI {
         }
     }
 
-<<<<<<< HEAD
-    // Testar conexão
-    async testConnection() {
-        try {
-            // Testa diretamente carregando as tabelas
-            console.log('[API] Testando conexão carregando tabelas...');
-            await this.loadTables();
-            this.isConnected = true;
-            return { success: true, message: 'Conexão estabelecida com sucesso!' };
-        } catch (error) {
-            console.log('[API] Erro no teste de tabelas, tentando endpoint alternativo...');
-            
-            // Tenta endpoint alternativo baseado no site
-            try {
-                let testEndpoint;
-                if (this.config.apiUrl.includes('api.baserow.io')) {
-                    // Para o site oficial, tenta um endpoint que sabemos que funciona
-                    testEndpoint = 'api/database/tables/all-tables/';
-                } else {
-                    // Para o VPS, tenta outro endpoint
-                    testEndpoint = `api/database/tables/database/${this.config.databaseId}/`;
-                }
-                
-                await this.makeRequest(testEndpoint);
-                this.isConnected = true;
-                return { success: true, message: 'Conexão estabelecida! API funcionando.' };
-            } catch (altError) {
-                this.isConnected = false;
-                return { success: false, error: `Falha na conexão: ${error.message}` };
-            }
-        }
-    }
-
-    // Carregar tabelas
-    async loadTables() {
-        const endpoints = [
-            'api/database/tables/all-tables/',
-            `api/database/tables/database/${this.config.databaseId}/`
-        ];
-
-        let lastError = null;
-
-        for (const endpoint of endpoints) {
-            try {
-                console.log(`[API] Tentando endpoint: ${endpoint}`);
-                const data = await this.makeRequest(endpoint);
-                
-                let tablesList = Array.isArray(data) ? data : (data.results || []);
-                
-                console.log(`[API] Resposta do endpoint ${endpoint}:`, data);
-                
-                // Se não encontrou tabelas na resposta, usar as configuradas
-                if (tablesList.length === 0) {
-                    console.log('[API] Nenhuma tabela retornada, usando configurações do site');
-                    tablesList = Object.entries(this.config.tables).map(([key, table]) => ({
-                        id: table.id,
-                        name: table.name,
-                        database_id: this.config.databaseId,
-                        key: key
-                    }));
-                }
-
-                console.log(`[API] ${tablesList.length} tabelas carregadas com sucesso`);
-                return tablesList;
-            } catch (error) {
-                console.log(`[API] Falhou endpoint ${endpoint}:`, error.message);
-                lastError = error;
-                continue;
-            }
-        }
-
-        // Se chegou aqui, todos os endpoints falharam
-        console.log('[API] Todos os endpoints falharam, usando configurações como fallback');
-        
-        // Como último recurso, retorna as tabelas das configurações
-        const fallbackTables = Object.entries(this.config.tables).map(([key, table]) => ({
-            id: table.id,
-            name: table.name,
-            database_id: this.config.databaseId,
-            key: key
-        }));
-
-        if (fallbackTables.length > 0) {
-            console.log(`[API] Usando ${fallbackTables.length} tabelas das configurações como fallback`);
-            return fallbackTables;
-        }
-
-        throw new Error(`Não foi possível carregar tabelas. Último erro: ${lastError?.message || 'Erro desconhecido'}`);
-=======
     async testConnection() {
         if (!this.config.apiUrl || !this.token) {
             return { success: false, error: 'API URL e Token são obrigatórios.' };
         }
-    
+
         const tableIds = {
             Conteúdos: this.config.conteudosTableId,
             Categorias: this.config.categoriasTableId,
@@ -373,7 +240,7 @@ class BaserowAPI {
             Planos: this.config.planosTableId,
             'Tv Categoria': this.config.tvCategoriaTableId
         };
-    
+
         for (const [name, id] of Object.entries(tableIds)) {
             if (!id) {
                 continue; // Pula tabelas não configuradas
@@ -385,7 +252,7 @@ class BaserowAPI {
                 return { success: false, error: `Falha ao acessar a tabela '${name}': ${error.message}` };
             }
         }
-    
+
         this.isConnected = true;
         return { success: true, message: 'Conexão e acesso às tabelas verificados com sucesso!' };
     }
@@ -395,7 +262,7 @@ class BaserowAPI {
         if (!this.isConnected) {
             return [];
         }
-        
+
         const tables = [
             { id: this.config.conteudosTableId, name: 'Conteúdos' },
             { id: this.config.categoriasTableId, name: 'Categorias' },
@@ -409,7 +276,6 @@ class BaserowAPI {
         ];
 
         return tables.filter(t => t.id); // Retorna apenas as tabelas que têm um ID configurado
->>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
     }
 
     // Carregar campos de uma tabela
@@ -417,12 +283,12 @@ class BaserowAPI {
         try {
             const data = await this.makeRequest(`api/database/fields/table/${tableId}/`);
             const fields = data.results || data || [];
-            
+
             // Marcar campos somente leitura
             fields.forEach(field => {
                 const fieldName = field.name.toLowerCase();
-                if (this.readOnlyFields.has(fieldName) || 
-                    fieldName.includes('created') || 
+                if (this.readOnlyFields.has(fieldName) ||
+                    fieldName.includes('created') ||
                     fieldName.includes('updated') ||
                     fieldName.endsWith('_on') ||
                     fieldName.endsWith('_at') ||
@@ -430,7 +296,7 @@ class BaserowAPI {
                     field.read_only = true;
                 }
             });
-            
+
             return fields;
         } catch (error) {
             console.warn(`[API] Erro ao carregar campos da tabela ${tableId}:`, error.message);
@@ -448,7 +314,7 @@ class BaserowAPI {
 
         const queryParams = { ...defaultParams, ...params };
         const queryString = new URLSearchParams(queryParams).toString();
-        
+
         return await this.makeRequest(`api/database/rows/table/${tableId}/?${queryString}`);
     }
 
@@ -462,7 +328,7 @@ class BaserowAPI {
         // Filtrar dados antes de enviar
         const filteredData = this.filterReadOnlyFields(data);
         console.log('[API] Criando registro com dados filtrados:', filteredData);
-        
+
         return await this.makeRequest(`api/database/rows/table/${tableId}/?user_field_names=true`, {
             method: 'POST',
             body: JSON.stringify(filteredData)
@@ -474,7 +340,7 @@ class BaserowAPI {
         // Filtrar dados antes de enviar
         const filteredData = this.filterReadOnlyFields(data);
         console.log('[API] Atualizando registro com dados filtrados:', filteredData);
-        
+
         return await this.makeRequest(`api/database/rows/table/${tableId}/${rowId}/?user_field_names=true`, {
             method: 'PATCH',
             body: JSON.stringify(filteredData)
@@ -493,11 +359,11 @@ class BaserowAPI {
         // Buscar todos os IDs
         let allIds = [];
         let page = 1;
-        
+
         while (true) {
             const data = await this.fetchRecords(tableId, { page, size: 200 });
             if (!data.results || data.results.length === 0) break;
-            
+
             allIds.push(...data.results.map(row => row.id));
             if (data.results.length < 200) break;
             page++;
@@ -510,21 +376,21 @@ class BaserowAPI {
         // Excluir em lotes
         const batchSize = 50;
         let deleted = 0;
-        
+
         for (let i = 0; i < allIds.length; i += batchSize) {
             const batch = allIds.slice(i, i + batchSize);
             const percentage = Math.round(((i + batch.length) / allIds.length) * 100);
-            
+
             if (onProgress) {
                 onProgress(percentage, deleted + batch.length, allIds.length);
             }
-            
-            await Promise.all(batch.map(id => 
+
+            await Promise.all(batch.map(id =>
                 this.deleteRecord(tableId, id).catch(err => {
                     console.error(`[API] Erro ao excluir ID ${id}:`, err);
                 })
             ));
-            
+
             deleted += batch.length;
         }
 
