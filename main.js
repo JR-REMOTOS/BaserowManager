@@ -767,6 +767,9 @@ class BaserowManager {
                 if (!config.baserow_api_token) {
                     this.ui.showAlert('Bem-vindo! Por favor, configure sua conexão Baserow.', 'info');
                     this.ui.toggleConfig();
+                } else {
+                    // Se houver token, tentar conectar automaticamente
+                    await this.ui.testConnection();
                 }
             } else {
                 // Se não houver dados de configuração, abrir o painel

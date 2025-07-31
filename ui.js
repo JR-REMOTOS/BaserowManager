@@ -167,12 +167,14 @@ class UIManager {
             });
         }
 
-        // Auto-save mapping
-        const mappingContainer = document.getElementById('mappingContainer');
-        if (mappingContainer) {
-            mappingContainer.addEventListener('change', (e) => {
-                if (e.target.tagName === 'SELECT') {
-                    this.showAlert('Mapeamento salvo automaticamente!', 'success');
+        // Auto-save all configurations on change
+        const configPanel = document.getElementById('configPanel');
+        if (configPanel) {
+            configPanel.addEventListener('change', (e) => {
+                const target = e.target;
+                if (target.tagName === 'INPUT' || target.tagName === 'SELECT') {
+                    console.log(`Config changed for ${target.id || target.name}, auto-saving...`);
+                    this.showAlert('Configuração salva automaticamente!', 'info');
                     this.saveConfig();
                 }
             });
