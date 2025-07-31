@@ -12,7 +12,7 @@ class M3UFieldMapper {
      */
     mapItemToBaserow(item, itemType = 'movie', mapping = {}) {
         const sourceData = {
-            'Nome': item.name || item.tvgName || 'Sem Nome',
+            'Nome': itemType === 'episode' ? (item.seriesName || 'Série Desconhecida') : (item.name || item.tvgName || 'Sem Nome'),
             'Capa': item.logo || '',
             'Categoria': item.group || 'Geral',
             'Sinopse': item.description || '',
@@ -63,7 +63,7 @@ class M3UFieldMapper {
                 'Temporadas': season,
                 'Idioma': 'DUB',
                 // Deixar Link/URL vazios intencionalmente para a entrada da série
-                'Link': '',
+                'Link': 'not link',
                 'View': 0,
                 'TMDB': '',
                 'Nota': 0,
