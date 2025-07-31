@@ -923,8 +923,20 @@ class M3UManager {
         const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
         tooltipTriggerList.forEach(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
 
-        // Desabilitar botões de envio até que a configuração esteja pronta
-        this.updateSendButtonsState(false);
+        // Verificar e habilitar/desabilitar botões de envio
+        this.checkAndEnableButtons();
+    }
+
+    checkAndEnableButtons() {
+        const config = this.baserowManager.api.config;
+        const hasConteudosTable = !!config.conteudosTableId;
+        const hasEpisodiosTable = !!config.episodiosTableId;
+        const hasConteudosMapping = config.mapping_conteudos && Object.keys(config.mapping_conteudos).length > 0;
+        const hasEpisodiosMapping = config.mapping_episodios && Object.keys(config.mapping_episodios).length > 0;
+
+        const isReady = hasConteudosTable && hasEpisodiosTable && hasConteudosMapping && hasEpisodiosMapping;
+
+        this.updateSendButtonsState(isReady);
     }
 
     renderBaserowStatus() {

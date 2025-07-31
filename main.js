@@ -795,6 +795,13 @@ class BaserowManager {
                 }
             });
 
+            const mappingConteudos = {};
+            document.querySelectorAll('[data-mapping="conteudos"] select').forEach(select => {
+                if (select.value) {
+                    mappingConteudos[select.name] = select.value;
+                }
+            });
+
             const mappingEpisodios = {};
             document.querySelectorAll('[data-mapping="episodios"] select').forEach(select => {
                 if (select.value) {

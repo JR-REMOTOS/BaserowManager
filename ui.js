@@ -243,6 +243,13 @@ class UIManager {
             }
         });
 
+        const mappingEpisodios = {};
+        document.querySelectorAll('[data-mapping="episodios"]').forEach(input => {
+            if (input.value) {
+                mappingEpisodios[input.name] = input.value;
+            }
+        });
+
         const config = {
             apiUrl: document.getElementById('apiUrl')?.value?.trim(),
             token: document.getElementById('apiToken')?.value?.trim(),
@@ -255,8 +262,8 @@ class UIManager {
             pagamentosTableId: document.getElementById('pagamentosTableId')?.value?.trim(),
             planosTableId: document.getElementById('planosTableId')?.value?.trim(),
             tvCategoriaTableId: document.getElementById('tvCategoriaTableId')?.value?.trim(),
-            mapping_conteudos: mappingConteudos
-            // Adicionar mapping_episodios quando implementado
+            mapping_conteudos: mappingConteudos,
+            mapping_episodios: mappingEpisodios
         };
 
         if (!config.apiUrl || !config.token) {
@@ -283,7 +290,7 @@ class UIManager {
             }
             if (config.episodiosTableId) {
                 const fields = await this.api.loadTableFields(config.episodiosTableId);
-                this.populateMappingDropdowns(fields, 'episodios', config.mapping_episodios);
+                this.populateMappingDropdowns(fields, 'episodios', config.mapping_episodios || {});
             }
 
             this.hideProgress();
@@ -700,6 +707,10 @@ class UIManager {
             await window.app.saveUserConfig();
         } else {
             console.error("saveUserConfig function not found on global app object.");
+        }
+
+        if (window.app && window.app.m3uManager && typeof window.app.m3uManager.checkAndEnableButtons === 'function') {
+            window.app.m3uManager.checkAndEnableButtons();
         }
     }
 
