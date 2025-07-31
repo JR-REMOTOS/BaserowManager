@@ -778,9 +778,9 @@ class BaserowManager {
     async saveUserConfig() {
         try {
             const mappingConteudos = {};
-            document.querySelectorAll('[data-mapping="conteudos"]').forEach(input => {
-                if (input.value) {
-                    mappingConteudos[input.name] = input.value;
+            document.querySelectorAll('[data-mapping="conteudos"] select').forEach(select => {
+                if (select.value) {
+                    mappingConteudos[select.name] = select.value;
                 }
             });
 

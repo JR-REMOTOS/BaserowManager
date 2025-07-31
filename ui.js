@@ -228,6 +228,36 @@ class UIManager {
         this.showAlert('⚡ Configurações preenchidas! Cole seu token e clique em "Testar Conexão"', 'info');
     }
 
+    populateMappingDropdowns(fields, type, savedMapping = {}) {
+        const container = document.getElementById(`${type}MappingContainer`);
+        if (!container) return;
+
+        const mappingFields = [
+            'Nome', 'Capa', 'Categoria', 'Sinopse', 'Link', 'Tipo', 'Idioma',
+            'Background', 'Nota', 'Temporadas', 'Tempo', 'Valor', 'Tipo Conteudo',
+            'Meu', 'Destaque', 'Data de Lançamento', 'View', 'TMDB', 'Episódio'
+        ];
+
+        let html = '';
+        mappingFields.forEach(fieldName => {
+            if ((type === 'conteudos' && fieldName === 'Episódio') || (type === 'episodios' && fieldName === 'Temporadas')) {
+                return;
+            }
+
+            const savedValue = savedMapping[fieldName] || '';
+
+            html += `<div class="col-md-4 mb-3">
+                        <label class="form-label text-white-50 small">${fieldName}</label>
+                        <select class="form-select form-select-sm" data-mapping="${type}" name="${fieldName}">
+                            <option value="">Não mapear</option>
+                            ${fields.map(f => `<option value="field_${f.id}" ${savedValue === `field_${f.id}` ? 'selected' : ''}>${f.name}</option>`).join('')}
+                        </select>
+                     </div>`;
+        });
+
+        container.innerHTML = html;
+    }
+
     async testConnection() {
         const mappingConteudos = {};
         document.querySelectorAll('[data-mapping="conteudos"]').forEach(input => {
@@ -268,6 +298,16 @@ class UIManager {
 
             const tables = this.api.loadTables();
             this.renderTables(tables);
+
+            // Carregar campos e popular dropdowns
+            if (config.conteudosTableId) {
+                const fields = await this.api.loadTableFields(config.conteudosTableId);
+                this.populateMappingDropdowns(fields, 'conteudos', config.mapping_conteudos);
+            }
+            if (config.episodiosTableId) {
+                const fields = await this.api.loadTableFields(config.episodiosTableId);
+                this.populateMappingDropdowns(fields, 'episodios', config.mapping_episodios);
+            }
 
             this.hideProgress();
             this.hideConfig();

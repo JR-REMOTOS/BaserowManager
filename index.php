@@ -350,29 +350,16 @@
                         </ul>
                         <div class="tab-content pt-3" id="mappingTabsContent">
                             <div class="tab-pane fade show active" id="conteudos-mapping" role="tabpanel">
-                                <div class="row">
-                                    <div class="col-md-3 mb-2"><input type="text" class="form-control form-control-sm" data-mapping="conteudos" name="Nome" placeholder="Nome"></div>
-                                    <div class="col-md-3 mb-2"><input type="text" class="form-control form-control-sm" data-mapping="conteudos" name="Capa" placeholder="Capa"></div>
-                                    <div class="col-md-3 mb-2"><input type="text" class="form-control form-control-sm" data-mapping="conteudos" name="Categoria" placeholder="Categoria"></div>
-                                    <div class="col-md-3 mb-2"><input type="text" class="form-control form-control-sm" data-mapping="conteudos" name="Sinopse" placeholder="Sinopse"></div>
-                                    <div class="col-md-3 mb-2"><input type="text" class="form-control form-control-sm" data-mapping="conteudos" name="Link" placeholder="Link"></div>
-                                    <div class="col-md-3 mb-2"><input type="text" class="form-control form-control-sm" data-mapping="conteudos" name="Tipo" placeholder="Tipo"></div>
-                                    <div class="col-md-3 mb-2"><input type="text" class="form-control form-control-sm" data-mapping="conteudos" name="Idioma" placeholder="Idioma"></div>
-                                    <div class="col-md-3 mb-2"><input type="text" class="form-control form-control-sm" data-mapping="conteudos" name="Background" placeholder="Background"></div>
-                                    <div class="col-md-3 mb-2"><input type="text" class="form-control form-control-sm" data-mapping="conteudos" name="Nota" placeholder="Nota"></div>
-                                    <div class="col-md-3 mb-2"><input type="text" class="form-control form-control-sm" data-mapping="conteudos" name="Temporadas" placeholder="Temporadas"></div>
-                                    <div class="col-md-3 mb-2"><input type="text" class="form-control form-control-sm" data-mapping="conteudos" name="Tempo" placeholder="Tempo"></div>
-                                    <div class="col-md-3 mb-2"><input type="text" class="form-control form-control-sm" data-mapping="conteudos" name="Valor" placeholder="Valor"></div>
-                                    <div class="col-md-3 mb-2"><input type="text" class="form-control form-control-sm" data-mapping="conteudos" name="Tipo Conteudo" placeholder="Tipo Conteudo"></div>
-                                    <div class="col-md-3 mb-2"><input type="text" class="form-control form-control-sm" data-mapping="conteudos" name="Meu" placeholder="Meu"></div>
-                                    <div class="col-md-3 mb-2"><input type="text" class="form-control form-control-sm" data-mapping="conteudos" name="Destaque" placeholder="Destaque"></div>
-                                    <div class="col-md-3 mb-2"><input type="text" class="form-control form-control-sm" data-mapping="conteudos" name="Data de Lançamento" placeholder="Data de Lançamento"></div>
-                                    <div class="col-md-3 mb-2"><input type="text" class="form-control form-control-sm" data-mapping="conteudos" name="View" placeholder="View"></div>
-                                    <div class="col-md-3 mb-2"><input type="text" class="form-control form-control-sm" data-mapping="conteudos" name="TMDB" placeholder="TMDB"></div>
+                                <div class="row" id="conteudosMappingContainer">
+                                    <!-- Os selects serão populados dinamicamente pelo JS -->
+                                    <p class="text-white-50">Conecte-se para carregar os campos da tabela.</p>
                                 </div>
                             </div>
                             <div class="tab-pane fade" id="episodios-mapping" role="tabpanel">
-                               <p class="text-white-50">Mapeamento para episódios (a ser implementado).</p>
+                               <div class="row" id="episodiosMappingContainer">
+                                   <!-- Os selects serão populados dinamicamente pelo JS -->
+                                   <p class="text-white-50">Conecte-se para carregar os campos da tabela.</p>
+                               </div>
                             </div>
                         </div>
                         <div class="d-flex gap-2 flex-wrap">
