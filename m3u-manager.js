@@ -20,26 +20,14 @@ class M3UManager {
         this.isLoading = false;
         this.xtreamAPI = new XtreamAPI();
         this.fieldMapper = new M3UFieldMapper();
-<<<<<<< HEAD
-=======
         this.worker = new Worker('m3u-worker.js');
->>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
         this.connectionStatus = 'disconnected';
         this.lastError = null;
         this.retryCount = 0;
         this.maxRetries = 3;
         this.batchSize = 100; // Tamanho do lote para processamento e renderização
         this.renderedCounts = { movies: 0, series: 0, channels: 0 }; // Contador de itens renderizados por categoria
-<<<<<<< HEAD
-        this.init();
-    }
 
-    init() {
-        this.setupEventListeners();
-        this.initializeStatusIndicator();
-        console.log('[M3U] M3U Manager inicializado');
-=======
-        
         this.worker.onmessage = (event) => {
             console.log('[M3U] Dados processados recebidos do worker.');
             this.processedContent = event.data;
@@ -54,7 +42,6 @@ class M3UManager {
         this.initializeStatusIndicator();
         console.log('[M3U] M3U Manager inicializado');
         await this.loadM3UContentFromDB();
->>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
     }
 
     initializeStatusIndicator() {
@@ -73,12 +60,12 @@ class M3UManager {
                 <small class="status-details ms-2 text-muted"></small>
             </div>
         `;
-        
+
         const xtreamForm = document.getElementById('xtreamForm');
         if (xtreamForm) {
             xtreamForm.insertBefore(indicator, xtreamForm.firstChild);
         }
-        
+
         return indicator;
     }
 
@@ -99,7 +86,7 @@ class M3UManager {
         };
 
         const config = statusConfig[status] || statusConfig.disconnected;
-        
+
         if (statusDot) statusDot.style.backgroundColor = config.color;
         if (statusText) statusText.textContent = `${config.icon} ${config.text}`;
         if (statusDetails) statusDetails.textContent = details;
@@ -125,13 +112,6 @@ class M3UManager {
                 this.toggleSelectAll();
             } else if (e.target.id === 'addSelectedItems') {
                 this.addSelectedItems();
-<<<<<<< HEAD
-            } else if (e.target.id === 'loadMoreMovies') {
-                this.loadMoreItems('movies');
-            } else if (e.target.id === 'loadMoreSeries') {
-                this.loadMoreItems('series');
-            } else if (e.target.id === 'loadMoreChannels') {
-=======
             }
         });
 
@@ -142,13 +122,10 @@ class M3UManager {
             } else if (e.target.matches('#loadMoreSeries')) {
                 this.loadMoreItems('series');
             } else if (e.target.matches('#loadMoreChannels')) {
->>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
                 this.loadMoreItems('channels');
             }
         });
 
-<<<<<<< HEAD
-=======
         // Rolagem infinita
         const mainContent = document.querySelector('.main-content');
         if (mainContent) {
@@ -167,7 +144,6 @@ class M3UManager {
             });
         }
 
->>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
         document.addEventListener('change', (e) => {
             if (e.target.classList.contains('item-checkbox')) {
                 this.handleItemSelection(e.target);
@@ -197,15 +173,15 @@ class M3UManager {
         const baseUrl = document.getElementById('xtreamBaseUrl')?.value?.trim();
         const username = document.getElementById('xtreamUsername')?.value?.trim();
         const password = document.getElementById('xtreamPassword')?.value?.trim();
-        
+
         const isValid = baseUrl && username && password && baseUrl.match(/^https?:\/\/.+/);
-        
+
         const testBtn = document.getElementById('testXtreamBtn');
         const loadBtn = document.getElementById('loadXtreamBtn');
-        
+
         if (testBtn) testBtn.disabled = !isValid;
         if (loadBtn) loadBtn.disabled = !isValid;
-        
+
         return isValid;
     }
 
@@ -223,18 +199,18 @@ class M3UManager {
             this.updateConnectionStatus('connecting', 'Testando credenciais...');
             this.setLoading(true, 'testXtreamBtn');
 
-            this.xtreamAPI.setCredentials({ 
-                baseUrl, 
-                username, 
-                password, 
-                connectionName: 'test_connection' 
+            this.xtreamAPI.setCredentials({
+                baseUrl,
+                username,
+                password,
+                connectionName: 'test_connection'
             });
 
             const authResult = await this.xtreamAPI.authenticate();
-            
+
             this.updateConnectionStatus('connected', 'Credenciais válidas');
             this.showAlert('✅ Conexão bem-sucedida! Credenciais válidas.\n\nSugestão: Clique em "Conectar Xtream" para carregar a lista.', 'success');
-            
+
             if (authResult.user_info) {
                 const info = authResult.user_info;
                 let message = '📊 Informações da conta:\n';
@@ -246,7 +222,7 @@ class M3UManager {
                 }
                 if (info.active_cons) message += `🔗 Conexões ativas: ${info.active_cons}\n`;
                 if (info.max_connections) message += `🔗 Máx. conexões: ${info.max_connections}`;
-                
+
                 this.showAlert(message, 'info');
             }
 
@@ -264,7 +240,7 @@ class M3UManager {
             return 'Erro desconhecido - Verifique a conexão ou tente novamente';
         }
         const message = error.message.toLowerCase();
-        
+
         if (message.includes('cors') || message.includes('cross-origin')) {
             return 'Erro de CORS - Tente usar HTTP ou configurar um proxy local';
         } else if (message.includes('credentials') || message.includes('authentication')) {
@@ -280,7 +256,7 @@ class M3UManager {
         } else if (message.includes('created_on')) {
             return 'Erro ao adicionar item: Campo created_on é somente leitura';
         }
-        
+
         return error.message;
     }
 
@@ -302,7 +278,7 @@ class M3UManager {
         try {
             this.showAlert('🧹 Limpando cache...', 'info');
             await this.xtreamAPI.clearCache();
-            
+
             if (this.currentPlaylist && this.currentPlaylist.length > 0) {
                 this.showAlert('♻️ Recarregando conteúdo...', 'info');
                 await this.loadXtreamContent(true);
@@ -316,8 +292,6 @@ class M3UManager {
     }
 
     async loadXtreamContent(forceDownload = true) {
-<<<<<<< HEAD
-=======
         if (forceDownload) {
             const confirmed = confirm("Isso limpará os dados M3U salvos localmente e buscará uma nova lista do servidor. Deseja continuar?");
             if (!confirmed) {
@@ -325,7 +299,6 @@ class M3UManager {
             }
         }
 
->>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
         const baseUrl = document.getElementById('xtreamBaseUrl')?.value?.trim();
         const username = document.getElementById('xtreamUsername')?.value?.trim();
         const password = document.getElementById('xtreamPassword')?.value?.trim();
@@ -352,21 +325,21 @@ class M3UManager {
             this.showAlert('🔌 Conectando ao Xtream Codes...', 'info');
 
             this.xtreamAPI.setCredentials({ baseUrl, username, password, connectionName });
-            
+
             this.updateConnectionStatus('connecting', 'Verificando credenciais...');
             this.showAlert('🔐 Verificando credenciais...', 'info');
-            
+
             await this.xtreamAPI.authenticate();
-            
+
             this.updateConnectionStatus('connected', 'Autenticado');
             this.showAlert('✅ Autenticação bem-sucedida! Baixando conteúdo...', 'success');
-            
+
             this.updateConnectionStatus('connected', 'Baixando playlist...');
             const m3uContent = await this.xtreamAPI.downloadM3U(forceDownload);
-            
+
             console.log('[M3U] Conteúdo M3U obtido, tamanho:', m3uContent.length);
             console.log('[M3U] Primeiros 1000 caracteres do M3U:', m3uContent.substring(0, 1000));
-            
+
             if (!m3uContent || m3uContent.length < 50) {
                 throw new Error('Conteúdo M3U está vazio ou muito pequeno. Verifique suas credenciais.');
             }
@@ -375,37 +348,34 @@ class M3UManager {
             this.updateConnectionStatus('connected', 'Processando playlist...');
 
             await this.processM3UContent(m3uContent);
-            
+
             this.retryCount = 0;
             this.lastError = null;
             const stats = this.getTotalItemsStats();
             this.updateConnectionStatus('connected', `${stats.total} itens carregados`);
             this.showAlert(`🎉 Lista Xtream carregada com sucesso!\n\n📊 ${stats.total} itens encontrados:\n🎬 ${stats.movies} filmes\n📺 ${stats.series} séries\n📡 ${stats.channels} canais`, 'success');
-            
-<<<<<<< HEAD
-=======
+
             // Salvar configurações do usuário
             if (this.baserowManager && typeof this.baserowManager.saveUserConfig === 'function') {
                 await this.baserowManager.saveUserConfig();
             }
 
->>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
         } catch (error) {
             console.error('[M3U] Erro ao carregar Xtream:', error);
             this.lastError = error;
-            
+
             if (this.retryCount < this.maxRetries && this.shouldRetry(error)) {
                 this.retryCount++;
                 this.updateConnectionStatus('connecting', `Tentativa ${this.retryCount}/${this.maxRetries}...`);
                 this.showAlert(`🔄 Tentativa ${this.retryCount}/${this.maxRetries}... ${this.getErrorMessage(error)}`, 'warning');
-                
+
                 await new Promise(resolve => setTimeout(resolve, 2000 * this.retryCount));
                 return this.attemptXtreamLoad(baseUrl, username, password, connectionName, forceDownload);
             }
-            
+
             this.updateConnectionStatus('error', this.getErrorMessage(error));
             this.showAlert(`❌ Erro ao carregar lista Xtream: ${this.getErrorMessage(error)}\n\nSugestões:\n- Tente usar HTTP em vez de HTTPS\n- Verifique as credenciais\n- Considere configurar um proxy CORS local`, 'danger');
-            
+
             // Renderizar conteúdo parcial, se disponível
             if (this.currentPlaylist?.length > 0) {
                 this.renderContent();
@@ -418,8 +388,8 @@ class M3UManager {
     shouldRetry(error) {
         if (!error || !error.message) return false;
         const message = error.message.toLowerCase();
-        return message.includes('network') || 
-               message.includes('timeout') || 
+        return message.includes('network') ||
+               message.includes('timeout') ||
                message.includes('cors') ||
                message.includes('fetch') ||
                !message.includes('credentials');
@@ -427,7 +397,7 @@ class M3UManager {
 
     async processM3UContent(m3uContent) {
         const splitContent = await this.xtreamAPI.splitM3U(m3uContent);
-        
+
         this.currentPlaylist = [];
         this.processedContent = {
             movies: [],
@@ -435,17 +405,17 @@ class M3UManager {
             channels: []
         };
         this.renderedCounts = { movies: 0, series: 0, channels: 0 };
-        
+
         let totalProcessed = 0;
 
         for (const [type, content] of Object.entries(splitContent)) {
             if (content && content !== '#EXTM3U' && content.includes('http')) {
                 console.log(`[M3U] Processando ${type} com ${content.split('\n').length} linhas`);
-                
+
                 try {
                     const parsedItems = this.parseM3U(content);
                     console.log(`[M3U] ${parsedItems.length} itens parseados para ${type}`, parsedItems.slice(0, 5));
-                    
+
                     // Processar em lotes para evitar sobrecarga de memória
                     for (let i = 0; i < parsedItems.length; i += this.batchSize) {
                         const batch = parsedItems.slice(i, i + this.batchSize);
@@ -466,7 +436,7 @@ class M3UManager {
         }
 
         console.log('[M3U] Total de itens processados:', totalProcessed);
-        
+
         if (totalProcessed === 0) {
             console.log('[M3U] Tentando processar conteúdo completo como fallback');
             const parsedItems = this.parseM3U(m3uContent);
@@ -488,9 +458,7 @@ class M3UManager {
 
         await this.processContent();
         await this.renderContent();
-<<<<<<< HEAD
-=======
-        
+
         // Salvar conteúdo no banco de dados
         await this.saveM3UContentToDB();
     }
@@ -540,7 +508,6 @@ class M3UManager {
             console.error('[M3U] Erro ao salvar conteúdo no DB:', error);
             this.showAlert('❌ Erro de conexão ao salvar conteúdo da lista.', 'danger');
         }
->>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
     }
 
     parseM3U(content) {
@@ -548,26 +515,26 @@ class M3UManager {
             console.error('[M3U] Conteúdo M3U vazio');
             return [];
         }
-        
+
         const lines = content.split(/[\r\n]+/).map(line => line.trim()).filter(line => line);
         const items = [];
         let currentItem = null;
-        
+
         console.log('[M3U] Parsing M3U com', lines.length, 'linhas');
-        
+
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
             console.log('[M3U] Processando linha:', line);
-            
+
             if (line.startsWith('#EXTINF:')) {
                 if (currentItem && currentItem.url) {
                     currentItem.id = this.generateId();
                     items.push({ ...currentItem });
                     console.log('[M3U] Item parseado:', currentItem);
                 }
-                
+
                 currentItem = this.parseExtinf(line);
-                
+
                 // Verificar se a próxima linha é uma URL
                 if (i + 1 < lines.length && this.isValidStreamUrl(lines[i + 1])) {
                     currentItem.url = lines[i + 1];
@@ -608,7 +575,7 @@ class M3UManager {
             items.push({ ...currentItem });
             console.log('[M3U] Último item parseado:', currentItem);
         }
-        
+
         console.log('[M3U] Total de itens extraídos:', items.length, items.slice(0, 5));
         return items;
     }
@@ -647,7 +614,7 @@ class M3UManager {
         if (nameMatch) {
             item.name = nameMatch[1].trim();
         }
-        
+
         if (!item.name || item.name === 'Sem Nome') {
             item.name = item.tvgName || item.group || 'Sem Nome';
         }
@@ -657,7 +624,7 @@ class M3UManager {
 
     isValidStreamUrl(url) {
         if (!url || typeof url !== 'string') return false;
-        
+
         return (
             url.match(/^https?:\/\/.+/i) ||
             url.match(/\.(m3u8?|ts|mp4|mkv|avi|mov|flv)(\?.*)?$/i) ||
@@ -674,11 +641,11 @@ class M3UManager {
             const urlObj = new URL(url);
             const pathname = urlObj.pathname;
             const filename = pathname.split('/').pop();
-            
+
             if (filename && filename !== '') {
                 return filename.replace(/\.(m3u8?|ts|mp4|mkv|avi|mov|flv)$/i, '');
             }
-            
+
             return urlObj.hostname + pathname;
         } catch (e) {
             const parts = url.split('/');
@@ -686,76 +653,6 @@ class M3UManager {
         }
     }
 
-<<<<<<< HEAD
-    async processContent() {
-        this.processedContent = {
-            movies: [],
-            series: {},
-            channels: []
-        };
-        this.renderedCounts = { movies: 0, series: 0, channels: 0 };
-
-        console.log('[M3U] Iniciando processamento de', this.currentPlaylist.length, 'itens');
-        
-        for (let i = 0; i < this.currentPlaylist.length; i += this.batchSize) {
-            const batch = this.currentPlaylist.slice(i, i + this.batchSize);
-            for (const item of batch) {
-                const category = this.categorizeItem(item);
-                console.log('[M3U] Item categorizado:', item.name, category);
-                
-                switch (category.type) {
-                    case 'movie':
-                        this.processedContent.movies.push({
-                            ...item,
-                            category: category.category || item.group || 'Filmes'
-                        });
-                        break;
-                        
-                    case 'series':
-                        if (!this.processedContent.series[category.seriesName]) {
-                            this.processedContent.series[category.seriesName] = {
-                                name: category.seriesName,
-                                logo: item.logo,
-                                episodes: [],
-                                group: item.group || 'Séries'
-                            };
-                        }
-                        this.processedContent.series[category.seriesName].episodes.push({
-                            ...item,
-                            season: category.season,
-                            episode: category.episode,
-                            episodeName: category.episodeName,
-                            seriesName: category.seriesName
-                        });
-                        break;
-                        
-                    case 'channel':
-                        this.processedContent.channels.push({
-                            ...item,
-                            category: item.group || 'Canais'
-                        });
-                        break;
-                }
-            }
-            await new Promise(resolve => setTimeout(resolve, 10)); // Pequena pausa para liberar memória
-        }
-
-        // Ordenar episódios por temporada e episódio
-        Object.values(this.processedContent.series).forEach(series => {
-            series.episodes.sort((a, b) => {
-                if ((a.season || 0) !== (b.season || 0)) {
-                    return (a.season || 0) - (b.season || 0);
-                }
-                return (a.episode || 0) - (b.episode || 0);
-            });
-        });
-
-        // Validar categorização
-        this.validateCategorization();
-
-        const stats = this.getTotalItemsStats();
-        console.log('[M3U] Resultado do processamento:', stats);
-=======
     async processContent(isInitial = true) {
         if (isInitial) {
             // Renderização inicial rápida com dados não processados
@@ -793,7 +690,6 @@ class M3UManager {
         `;
         container.innerHTML = html;
         container.style.display = 'block';
->>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
     }
 
     validateCategorization() {
@@ -825,12 +721,12 @@ class M3UManager {
         const name = (item.name || '').toLowerCase();
         const group = (item.group || '').toLowerCase();
         const originalType = item.type || item.originalType || '';
-        
+
         // Priorizar o tipo original da lista M3U
         if (originalType === 'movies') {
-            return { 
-                type: 'movie', 
-                category: item.group || 'Filmes' 
+            return {
+                type: 'movie',
+                category: item.group || 'Filmes'
             };
         } else if (originalType === 'series') {
             const seriesPatterns = [
@@ -888,7 +784,7 @@ class M3UManager {
         }
 
         // Se não for identificado como série, categorizar como filme
-        return { 
+        return {
             type: 'movie',
             category: item.group || 'Filmes'
         };
@@ -1016,7 +912,7 @@ class M3UManager {
 
         container.innerHTML = html;
         console.log('[M3U] HTML renderizado (primeiros 1000 caracteres):', html.substring(0, 1000));
-        
+
         // Forçar visibilidade do container
         container.style.display = 'block';
         container.style.visibility = 'visible';
@@ -1026,8 +922,6 @@ class M3UManager {
         // Inicializar tooltips do Bootstrap
         const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
         tooltipTriggerList.forEach(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
-<<<<<<< HEAD
-=======
 
         // Verificar e habilitar/desabilitar botões de envio
         this.checkAndEnableButtons();
@@ -1041,15 +935,14 @@ class M3UManager {
         const hasEpisodiosMapping = config.mapping_episodios && Object.keys(config.mapping_episodios).length > 0;
 
         const isReady = hasConteudosTable && hasEpisodiosTable && hasConteudosMapping && hasEpisodiosMapping;
-        
+
         this.updateSendButtonsState(isReady);
->>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
     }
 
     renderBaserowStatus() {
         const hasTable = this.baserowManager.currentTable;
         const tableName = hasTable ? this.baserowManager.currentTable.name : null;
-        
+
         if (!hasTable) {
             return `
                 <div class="alert alert-info">
@@ -1062,7 +955,7 @@ class M3UManager {
                 </div>
             `;
         }
-        
+
         const isCompatible = this.baserowManager.ui.isTableM3UCompatible({ name: tableName });
         return `
             <div class="alert alert-${isCompatible ? 'success' : 'warning'}">
@@ -1082,21 +975,13 @@ class M3UManager {
             return '<div class="text-center py-4 text-muted">Nenhum filme encontrado</div>';
         }
 
-<<<<<<< HEAD
-        const groupedMovies = this.groupBy(this.processedContent.movies.slice(0, this.batchSize), 'category');
-        this.renderedCounts.movies = Math.min(this.batchSize, this.processedContent.movies.length);
-        
-        return Object.entries(groupedMovies).map(([category, movies]) => `
-            <div class="category-section mb-4">
-=======
         const moviesToRender = this.processedContent.movies.slice(0, this.batchSize);
         this.renderedCounts.movies = moviesToRender.length;
 
         const groupedMovies = this.groupBy(moviesToRender, 'category');
-        
+
         let html = Object.entries(groupedMovies).map(([category, movies]) => `
             <div class="category-section mb-4" data-category-group="movies">
->>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
                 <div class="category-header d-flex justify-content-between align-items-center mb-3">
                     <h6 class="mb-0">
                         <i class="fas fa-folder me-2"></i>${category}
@@ -1111,15 +996,12 @@ class M3UManager {
                 </div>
             </div>
         `).join('');
-<<<<<<< HEAD
-=======
 
         if (this.processedContent.movies.length > this.renderedCounts.movies) {
             html += `<button class="btn btn-outline-primary w-100 mt-3" id="loadMoreMovies" onclick="app.m3uManager.loadMoreItems('movies')">Carregar Mais Filmes</button>`;
         }
 
         return html;
->>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
     }
 
     renderSeries() {
@@ -1127,24 +1009,14 @@ class M3UManager {
             return '<div class="text-center py-4 text-muted">Nenhuma série encontrada</div>';
         }
 
-<<<<<<< HEAD
-        const seriesKeys = Object.keys(this.processedContent.series).slice(0, this.batchSize);
-        this.renderedCounts.series = Math.min(this.batchSize, seriesKeys.length);
-        
-        return seriesKeys.map(seriesName => {
-            const series = this.processedContent.series[seriesName];
-            return `
-                <div class="series-section mb-4">
-=======
         const seriesKeys = Object.keys(this.processedContent.series);
         const seriesToRender = seriesKeys.slice(0, this.batchSize);
         this.renderedCounts.series = seriesToRender.length;
-        
+
         let html = seriesToRender.map(seriesName => {
             const series = this.processedContent.series[seriesName];
             return `
                 <div class="series-section mb-4" data-category-group="series">
->>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
                     <div class="series-header d-flex justify-content-between align-items-center mb-3 p-3 bg-light rounded">
                         <div class="series-info d-flex align-items-center">
                             ${series.logo ? `<img src="${series.logo}" alt="${seriesName}" class="series-logo me-3" style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px;" onerror="this.style.display='none'">` : ''}
@@ -1170,15 +1042,12 @@ class M3UManager {
                 </div>
             `;
         }).join('');
-<<<<<<< HEAD
-=======
 
         if (seriesKeys.length > this.renderedCounts.series) {
             html += `<button class="btn btn-outline-primary w-100 mt-3" id="loadMoreSeries" onclick="app.m3uManager.loadMoreItems('series')">Carregar Mais Séries</button>`;
         }
 
         return html;
->>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
     }
 
     renderChannels() {
@@ -1186,21 +1055,13 @@ class M3UManager {
             return '<div class="text-center py-4 text-muted">Nenhum canal encontrado</div>';
         }
 
-<<<<<<< HEAD
-        const groupedChannels = this.groupBy(this.processedContent.channels.slice(0, this.batchSize), 'category');
-        this.renderedCounts.channels = Math.min(this.batchSize, this.processedContent.channels.length);
-        
-        return Object.entries(groupedChannels).map(([category, channels]) => `
-            <div class="category-section mb-4">
-=======
         const channelsToRender = this.processedContent.channels.slice(0, this.batchSize);
         this.renderedCounts.channels = channelsToRender.length;
 
         const groupedChannels = this.groupBy(channelsToRender, 'category');
-        
+
         let html = Object.entries(groupedChannels).map(([category, channels]) => `
             <div class="category-section mb-4" data-category-group="channels">
->>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
                 <div class="category-header d-flex justify-content-between align-items-center mb-3">
                     <h6 class="mb-0">
                         <i class="fas fa-broadcast-tower me-2"></i>${category}
@@ -1215,20 +1076,17 @@ class M3UManager {
                 </div>
             </div>
         `).join('');
-<<<<<<< HEAD
-=======
 
         if (this.processedContent.channels.length > this.renderedCounts.channels) {
             html += `<button class="btn btn-outline-primary w-100 mt-3" id="loadMoreChannels" onclick="app.m3uManager.loadMoreItems('channels')">Carregar Mais Canais</button>`;
         }
 
         return html;
->>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
     }
 
     renderItem(item, type) {
-        const title = type === 'episode' ? 
-            `${item.episodeName || item.name} (S${item.season || '?'}E${item.episode || '?'})` : 
+        const title = type === 'episode' ?
+            `${item.episodeName || item.name} (S${item.season || '?'}E${item.episode || '?'})` :
             item.name;
 
         const safeTitle = this.escapeHtml(title);
@@ -1241,9 +1099,9 @@ class M3UManager {
                             <div class="form-check me-2 mt-1">
                                 <input class="form-check-input item-checkbox" type="checkbox" value="${item.id}" id="item-${item.id}">
                             </div>
-                            ${item.logo ? 
+                            ${item.logo ?
                                 `<img src="${item.logo}" alt="${safeTitle}" class="item-logo me-3" style="width: 60px; height: 60px; object-fit: cover; border-radius: 6px;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                                 <div class="item-logo-placeholder me-3" style="display: none; width: 60px; height: 60px; background: #f0f0f0; border-radius: 6px;"></div>` : 
+                                 <div class="item-logo-placeholder me-3" style="display: none; width: 60px; height: 60px; background: #f0f0f0; border-radius: 6px;"></div>` :
                                 '<div class="item-logo-placeholder me-3" style="width: 60px; height: 60px; background: #f0f0f0; border-radius: 6px;"></div>'
                             }
                             <div class="item-info flex-grow-1">
@@ -1269,119 +1127,19 @@ class M3UManager {
     }
 
     async loadMoreItems(category) {
-<<<<<<< HEAD
-        const tabContent = document.getElementById(category);
-        if (!tabContent) return;
-
-        let itemsToRender = [];
-        let html = '';
-
-        switch (category) {
-            case 'movies':
-                this.renderedCounts.movies += this.batchSize;
-                itemsToRender = this.processedContent.movies.slice(this.renderedCounts.movies - this.batchSize, this.renderedCounts.movies);
-                const groupedMovies = this.groupBy(itemsToRender, 'category');
-                html = Object.entries(groupedMovies).map(([cat, movies]) => `
-                    <div class="category-section mb-4">
-                        <div class="category-header d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="mb-0">
-                                <i class="fas fa-folder me-2"></i>${cat}
-                                <span class="badge bg-secondary ms-2">${movies.length}</span>
-                            </h6>
-                            <button class="btn btn-outline-success btn-sm add-all-items" data-category="movies-${cat}" data-bs-toggle="tooltip" title="Adicionar todos os filmes desta categoria ao Baserow">
-                                <i class="fas fa-plus"></i> Adicionar Todos
-                            </button>
-                        </div>
-                        <div class="row">
-                            ${movies.map(movie => this.renderItem(movie, 'movie')).join('')}
-                        </div>
-                    </div>
-                `).join('');
-                break;
-            case 'series':
-                this.renderedCounts.series += this.batchSize;
-                const seriesKeys = Object.keys(this.processedContent.series).slice(this.renderedCounts.series - this.batchSize, this.renderedCounts.series);
-                html = seriesKeys.map(seriesName => {
-                    const series = this.processedContent.series[seriesName];
-                    return `
-                        <div class="series-section mb-4">
-                            <div class="series-header d-flex justify-content-between align-items-center mb-3 p-3 bg-light rounded">
-                                <div class="series-info d-flex align-items-center">
-                                    ${series.logo ? `<img src="${series.logo}" alt="${seriesName}" class="series-logo me-3" style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px;" onerror="this.style.display='none'">` : ''}
-                                    <div>
-                                        <h6 class="mb-0">${seriesName}</h6>
-                                        <small class="text-muted">${series.episodes.length} episódios</small>
-                                    </div>
-                                </div>
-                                <div class="series-actions">
-                                    <button class="btn btn-outline-success btn-sm add-all-items me-2" data-category="series-${seriesName}" data-bs-toggle="tooltip" title="Adicionar todos os episódios desta série ao Baserow">
-                                        <i class="fas fa-plus"></i> Adicionar Série
-                                    </button>
-                                    <button class="btn btn-outline-primary btn-sm series-toggle" data-series-name="${seriesName}" data-bs-toggle="tooltip" title="Mostrar/esconder episódios">
-                                        <i class="fas fa-chevron-down"></i> Episódios
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="series-episodes collapse" id="episodes-${this.sanitizeId(seriesName)}">
-                                <div class="row">
-                                    ${series.episodes.slice(0, this.batchSize).map(episode => this.renderItem(episode, 'episode')).join('')}
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-                break;
-            case 'channels':
-                this.renderedCounts.channels += this.batchSize;
-                itemsToRender = this.processedContent.channels.slice(this.renderedCounts.channels - this.batchSize, this.renderedCounts.channels);
-                const groupedChannels = this.groupBy(itemsToRender, 'category');
-                html = Object.entries(groupedChannels).map(([cat, channels]) => `
-                    <div class="category-section mb-4">
-                        <div class="category-header d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="mb-0">
-                                <i class="fas fa-broadcast-tower me-2"></i>${cat}
-                                <span class="badge bg-secondary ms-2">${channels.length}</span>
-                            </h6>
-                            <button class="btn btn-outline-success btn-sm add-all-items" data-category="channels-${cat}" data-bs-toggle="tooltip" title="Adicionar todos os canais desta categoria ao Baserow">
-                                <i class="fas fa-plus"></i> Adicionar Todos
-                            </button>
-                        </div>
-                        <div class="row">
-                            ${channels.map(channel => this.renderItem(channel, 'channel')).join('')}
-                        </div>
-                    </div>
-                `).join('');
-                break;
-        }
-
-        const loadMoreButton = tabContent.querySelector(`#loadMore${category.charAt(0).toUpperCase() + category.slice(1)}`);
-        if (loadMoreButton) {
-            loadMoreButton.insertAdjacentHTML('beforebegin', html);
-            if (this.renderedCounts[category] >= (category === 'series' ? Object.keys(this.processedContent.series).length : this.processedContent[category].length)) {
-                loadMoreButton.remove();
-            }
-        }
-
-        // Re-inicializar tooltips para novos elementos
-        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-        tooltipTriggerList.forEach(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
-    }
-
-    async addSingleItem(itemId) {
-=======
         const loadMoreButton = document.getElementById(`loadMore${category.charAt(0).toUpperCase() + category.slice(1)}`);
         if (!loadMoreButton) return;
-    
+
         loadMoreButton.disabled = true;
         loadMoreButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Carregando...';
-    
+
         const currentCount = this.renderedCounts[category];
         const newCount = currentCount + this.batchSize;
-    
+
         let items;
         let container;
         let html = '';
-    
+
         switch (category) {
             case 'movies':
                 items = this.processedContent.movies.slice(currentCount, newCount);
@@ -1400,7 +1158,7 @@ class M3UManager {
                 html = items.map(channel => this.renderItem(channel, 'channel')).join('');
                 break;
         }
-    
+
         if (container && html) {
             // Usar um elemento temporário para inserir o HTML e evitar problemas de script
             const tempDiv = document.createElement('div');
@@ -1409,16 +1167,16 @@ class M3UManager {
                 container.appendChild(tempDiv.firstChild);
             }
         }
-    
+
         this.renderedCounts[category] = newCount;
-    
+
         if (newCount >= (category === 'series' ? Object.keys(this.processedContent.series).length : this.processedContent[category].length)) {
             loadMoreButton.remove();
         } else {
             loadMoreButton.disabled = false;
             loadMoreButton.innerHTML = `Carregar Mais ${category.charAt(0).toUpperCase() + category.slice(1)}`;
         }
-    
+
         // Re-inicializar tooltips para novos elementos
         const tooltipTriggerList = [].slice.call(container.querySelectorAll('[data-bs-toggle="tooltip"]'));
         tooltipTriggerList.forEach(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
@@ -1460,7 +1218,6 @@ class M3UManager {
             return;
         }
 
->>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
         const item = this.findItemById(itemId);
         if (!item) {
             this.showAlert('❌ Item não encontrado', 'error');
@@ -1469,16 +1226,10 @@ class M3UManager {
 
         const itemType = this.getItemTypeForMapping(item);
         const isEpisode = itemType === 'episode';
-        
-<<<<<<< HEAD
-        const tables = this.baserowManager.api.config.tables;
-        const tableId = isEpisode ? tables.episodios.id : tables.conteudos.id;
-        const tableName = isEpisode ? tables.episodios.name : tables.conteudos.name;
-=======
+
         const apiConfig = this.baserowManager.api.config;
         const tableId = isEpisode ? apiConfig.episodiosTableId : apiConfig.conteudosTableId;
         const tableName = isEpisode ? 'Episódios' : 'Conteúdos';
->>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
 
         if (!tableId) {
             this.showAlert(`⚠️ Tabela para "${itemType}" não encontrada na configuração.`, 'danger');
@@ -1488,20 +1239,20 @@ class M3UManager {
         try {
             this.setLoading(true, `add-single-item-${itemId}`);
             this.showAlert(`⬆️ Adicionando "${item.name}" à tabela "${tableName}"...`, 'info');
-            
+
             const formattedData = this.formatItemForBaserow(item, itemType);
-            
+
             await this.baserowManager.api.createRecord(tableId, formattedData);
-            
+
             this.showAlert(`✅ "${item.name}" adicionado com sucesso!`, 'success');
-            
+
             const checkbox = document.getElementById(`item-${itemId}`);
             if (checkbox) {
                 checkbox.checked = false;
                 checkbox.disabled = true;
                 checkbox.parentElement.parentElement.parentElement.style.opacity = '0.6';
             }
-            
+
         } catch (error) {
             console.error('[M3U] Erro ao adicionar item:', error);
             this.showAlert(`❌ Erro ao adicionar "${item.name}": ${this.getErrorMessage(error)}`, 'danger');
@@ -1511,11 +1262,6 @@ class M3UManager {
     }
 
     async addAllItems(category) {
-<<<<<<< HEAD
-        const tables = this.baserowManager.api.config.tables;
-        const moviesTableId = tables.conteudos.id;
-        const episodesTableId = tables.episodios.id;
-=======
         if (!this.baserowManager.api.config.conteudosTableId) {
             this.showAlert('Por favor, configure o mapeamento de campos e os IDs das tabelas antes de adicionar itens.', 'warning');
             return;
@@ -1524,7 +1270,6 @@ class M3UManager {
         const apiConfig = this.baserowManager.api.config;
         const moviesTableId = apiConfig.conteudosTableId;
         const episodesTableId = apiConfig.episodiosTableId;
->>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
 
         if (!moviesTableId || !episodesTableId) {
             this.showAlert('⚠️ IDs das tabelas de conteúdos ou episódios não encontrados na configuração.', 'danger');
@@ -1563,12 +1308,8 @@ class M3UManager {
             this.showAlert(`🚀 Iniciando adição em massa de ${items.length} itens...`, 'info');
 
             if (isSeries) {
-<<<<<<< HEAD
-                const seriesHeaderData = this.fieldMapper.mapSeriesHeader(this.processedContent.series[seriesName]);
-=======
                 const conteudosMapping = this.baserowManager.api.config.mapping_conteudos;
                 const seriesHeaderData = this.fieldMapper.mapSeriesHeader(this.processedContent.series[seriesName], conteudosMapping);
->>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
                 for (const seasonData of seriesHeaderData) {
                     try {
                         await this.baserowManager.api.createRecord(moviesTableId, seasonData);
@@ -1587,7 +1328,7 @@ class M3UManager {
                     const formattedData = this.formatItemForBaserow(item, itemType);
                     await this.baserowManager.api.createRecord(tableId, formattedData);
                     successCount++;
-                    
+
                     const checkbox = document.getElementById(`item-${item.id}`);
                     if (checkbox) {
                         checkbox.checked = false;
@@ -1603,9 +1344,9 @@ class M3UManager {
             const message = successCount > 0 ?
                 `🎉 ${successCount} itens adicionados com sucesso!` + (errorCount > 0 ? ` (❌ ${errorCount} falharam)` : '') :
                 `❌ Falha ao adicionar itens.`;
-            
+
             this.showAlert(message, successCount > 0 ? 'success' : 'danger');
-            
+
         } catch (error) {
             console.error('[M3U] Erro na adição em massa:', error);
             this.showAlert('❌ Erro na adição em massa: ' + this.getErrorMessage(error), 'danger');
@@ -1615,29 +1356,20 @@ class M3UManager {
     }
 
     async addSelectedItems() {
-<<<<<<< HEAD
-=======
         if (!this.baserowManager.api.config.conteudosTableId) {
             this.showAlert('Por favor, configure o mapeamento de campos e os IDs das tabelas antes de adicionar itens.', 'warning');
             return;
         }
 
->>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
         const selectedCheckboxes = document.querySelectorAll('.item-checkbox:checked');
         if (selectedCheckboxes.length === 0) {
             this.showAlert('⚠️ Selecione pelo menos um item', 'warning');
             return;
         }
-        
-<<<<<<< HEAD
-        const tables = this.baserowManager.api.config.tables;
-        const moviesTableId = tables.conteudos.id;
-        const episodesTableId = tables.episodios.id;
-=======
+
         const apiConfig = this.baserowManager.api.config;
         const moviesTableId = apiConfig.conteudosTableId;
         const episodesTableId = apiConfig.episodiosTableId;
->>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
 
         if (!moviesTableId || !episodesTableId) {
             this.showAlert('⚠️ IDs das tabelas de conteúdos ou episódios não encontrados na configuração.', 'danger');
@@ -1665,7 +1397,7 @@ class M3UManager {
                         const formattedData = this.formatItemForBaserow(item, itemType);
                         await this.baserowManager.api.createRecord(tableId, formattedData);
                         successCount++;
-                        
+
                         checkbox.checked = false;
                         checkbox.disabled = true;
                         checkbox.parentElement.parentElement.parentElement.style.opacity = '0.6';
@@ -1679,11 +1411,11 @@ class M3UManager {
             const message = successCount > 0 ?
                 `🎉 ${successCount} itens adicionados com sucesso!` + (errorCount > 0 ? ` (❌ ${errorCount} falharam)` : '') :
                 `❌ Falha ao adicionar itens selecionados.`;
-            
+
             this.showAlert(message, successCount > 0 ? 'success' : 'danger');
 
             document.getElementById('selectAllItems').checked = false;
-            
+
         } catch (error) {
             console.error('[M3U] Erro na adição de itens selecionados:', error);
             this.showAlert('❌ Erro na adição de itens selecionados: ' + this.getErrorMessage(error), 'danger');
@@ -1694,22 +1426,15 @@ class M3UManager {
 
     formatItemForBaserow(item) {
         const itemType = this.getItemTypeForMapping(item);
-<<<<<<< HEAD
-        const tableFields = this.baserowManager.ui?.tableFields || [];
-        const tableName = this.baserowManager.currentTable?.name || '';
-        
-        return this.fieldMapper.mapItemToBaserow(item, tableFields, tableName, itemType);
-=======
         const config = this.baserowManager.api.config;
         const mapping = itemType === 'episode' ? config.mapping_episodios : config.mapping_conteudos;
-        
+
         if (!mapping) {
             this.showAlert('Mapeamento de campos não configurado.', 'danger');
             throw new Error('Mapeamento de campos não configurado.');
         }
 
         return this.fieldMapper.mapItemToBaserow(item, itemType, mapping);
->>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
     }
 
     getItemTypeForMapping(item) {
@@ -1722,27 +1447,27 @@ class M3UManager {
         for (const movie of this.processedContent.movies) {
             if (movie.id === id) return movie;
         }
-        
+
         for (const series of Object.values(this.processedContent.series)) {
             for (const episode of series.episodes) {
                 if (episode.id === id) return episode;
             }
         }
-        
+
         for (const channel of this.processedContent.channels) {
             if (channel.id === id) return channel;
         }
-        
+
         return null;
     }
 
     toggleSeries(seriesName) {
         const episodesContainer = document.getElementById(`episodes-${this.sanitizeId(seriesName)}`);
         const toggleBtn = document.querySelector(`[data-series-name="${seriesName}"]`);
-        
+
         if (episodesContainer && toggleBtn) {
             const isVisible = episodesContainer.classList.contains('show');
-            
+
             if (isVisible) {
                 episodesContainer.classList.remove('show');
                 toggleBtn.innerHTML = '<i class="fas fa-chevron-down"></i> Episódios';
@@ -1756,7 +1481,7 @@ class M3UManager {
     toggleSelectAll() {
         const selectAllCheckbox = document.getElementById('selectAllItems');
         const itemCheckboxes = document.querySelectorAll('.item-checkbox:not(:disabled)');
-        
+
         itemCheckboxes.forEach(checkbox => {
             checkbox.checked = selectAllCheckbox.checked;
         });
@@ -1766,7 +1491,7 @@ class M3UManager {
         const selectAllCheckbox = document.getElementById('selectAllItems');
         const itemCheckboxes = document.querySelectorAll('.item-checkbox:not(:disabled)');
         const checkedBoxes = document.querySelectorAll('.item-checkbox:checked');
-        
+
         if (selectAllCheckbox) {
             selectAllCheckbox.checked = checkedBoxes.length === itemCheckboxes.length;
             selectAllCheckbox.indeterminate = checkedBoxes.length > 0 && checkedBoxes.length < itemCheckboxes.length;
@@ -1807,8 +1532,8 @@ class M3UManager {
             movies: this.processedContent.movies.length,
             series: Object.keys(this.processedContent.series).length,
             channels: this.processedContent.channels.length,
-            total: this.processedContent.movies.length + 
-                   Object.values(this.processedContent.series).reduce((sum, series) => sum + series.episodes.length, 0) + 
+            total: this.processedContent.movies.length +
+                   Object.values(this.processedContent.series).reduce((sum, series) => sum + series.episodes.length, 0) +
                    this.processedContent.channels.length
         };
     }
@@ -1816,7 +1541,7 @@ class M3UManager {
     setLoading(loading, buttonId = null) {
         this.isLoading = loading;
         const buttons = buttonId ? [buttonId] : ['loadXtreamBtn', 'testXtreamBtn'];
-        
+
         buttons.forEach(id => {
             const btn = document.getElementById(id) || document.querySelector(`[data-item-id="${id.replace('add-single-item-', '')}"]`);
             if (btn) {
@@ -1841,8 +1566,6 @@ class M3UManager {
         });
     }
 
-<<<<<<< HEAD
-=======
     updateSendButtonsState(enabled) {
         const buttons = document.querySelectorAll('.add-single-item, .add-all-items, #addSelectedItems');
         buttons.forEach(btn => {
@@ -1855,23 +1578,22 @@ class M3UManager {
         });
     }
 
->>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
     showAlert(message, type = 'info') {
         if (this.baserowManager && this.baserowManager.ui) {
             this.baserowManager.ui.showAlert(message, type);
         } else {
             console.log(`[M3U] ${type.toUpperCase()}: ${message}`);
-            
+
             const alertDiv = document.createElement('div');
             alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
             alertDiv.innerHTML = `
                 ${message.replace(/\n/g, '<br>')}
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             `;
-            
+
             const container = document.querySelector('.main-content') || document.body;
             container.insertBefore(alertDiv, container.firstChild);
-            
+
             setTimeout(() => alertDiv.remove(), 5000);
         }
     }

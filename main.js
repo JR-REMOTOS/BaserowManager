@@ -26,7 +26,7 @@ class BaserowManager {
 
         try {
             console.log('[App] Inicializando aplicação...');
-            
+
             // Aguardar DOM estar pronto
             if (document.readyState === 'loading') {
                 await new Promise(resolve => document.addEventListener('DOMContentLoaded', resolve));
@@ -34,28 +34,25 @@ class BaserowManager {
 
             // Inicializar interface
             this.ui.init();
-            
+
             // Inicializar M3U Manager
             this.m3uManager = new M3UManager(this);
-            
+
             // Configurar handlers globais
             this.setupGlobalHandlers();
-            
+
             // Disponibilizar globalmente para uso nos event handlers inline
             window.app = this;
-            
+
             // Configurar navegação entre views
             this.setupViewNavigation();
-            
-<<<<<<< HEAD
-=======
+
             // Carregar configurações do usuário
             await this.loadUserConfig();
 
->>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
             this.isInitialized = true;
             console.log('[App] Aplicação inicializada com sucesso');
-            
+
         } catch (error) {
             console.error('[App] Erro na inicialização:', error);
             this.ui.showAlert('Erro ao inicializar aplicação: ' + error.message, 'danger');
@@ -86,33 +83,33 @@ class BaserowManager {
      */
     switchToM3UView() {
         this.currentView = 'm3u';
-        
+
         // Ocultar elementos do Baserow
         const elementsToHide = [
             'tableHeader',
-            'recordForm', 
+            'recordForm',
             'dataContainer',
             'emptyState',
             'loading'
         ];
-        
+
         elementsToHide.forEach(id => {
             const element = document.getElementById(id);
             if (element) element.style.display = 'none';
         });
-        
+
         // Mostrar conteúdo M3U
         const m3uContent = document.getElementById('m3uContent');
         if (m3uContent) {
             m3uContent.style.display = 'block';
         }
-        
+
         // Destacar seção M3U na sidebar
         const m3uSection = document.getElementById('m3uSection');
         if (m3uSection) {
             m3uSection.classList.add('active');
         }
-        
+
         // Remover destaque das tabelas
         document.querySelectorAll('.table-item').forEach(item => {
             item.classList.remove('active');
@@ -124,13 +121,13 @@ class BaserowManager {
      */
     switchToBaserowView() {
         this.currentView = 'baserow';
-        
+
         // Ocultar conteúdo M3U
         const m3uContent = document.getElementById('m3uContent');
         if (m3uContent) {
             m3uContent.style.display = 'none';
         }
-        
+
         // Remover destaque da seção M3U
         const m3uSection = document.getElementById('m3uSection');
         if (m3uSection) {
@@ -182,7 +179,7 @@ class BaserowManager {
         if (m3uUrl) {
             m3uUrl.focus();
         }
-        
+
         // Se já tem conteúdo M3U carregado, mostrar
         if (this.m3uManager && this.m3uManager.currentPlaylist) {
             this.switchToM3UView();
@@ -343,7 +340,7 @@ class BaserowManager {
         try {
             // Coletar dados do formulário
             const formData = this.collectFormData();
-            
+
             // Validar dados
             const validation = this.validateFormData(formData);
             if (!validation.valid) {
@@ -382,13 +379,13 @@ class BaserowManager {
      */
     collectFormData() {
         const formData = {};
-        
+
         this.ui.tableFields
             .filter(field => field.name !== 'id' && !field.read_only)
             .forEach(field => {
                 const fieldId = `field_${field.name.replace(/\s+/g, '_')}`;
                 const element = document.getElementById(fieldId);
-                
+
                 if (element) {
                     let value = element.value;
 
@@ -418,7 +415,7 @@ class BaserowManager {
         Object.keys(formData).forEach(fieldName => {
             const value = formData[fieldName];
             const field = this.ui.tableFields.find(f => f.name === fieldName);
-            
+
             if (!field) return;
 
             // Validações específicas por tipo de campo
@@ -578,7 +575,7 @@ class BaserowManager {
             .forEach(field => {
                 const fieldId = `field_${field.name.replace(/\s+/g, '_')}`;
                 const element = document.getElementById(fieldId);
-                
+
                 if (element) {
                     if (element.type === 'checkbox') {
                         element.checked = false;
@@ -593,7 +590,7 @@ class BaserowManager {
         // Limpar erros de validação
         document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
         document.querySelectorAll('.invalid-feedback').forEach(el => el.textContent = '');
-        
+
         this.ui.showAlert('Formulário limpo', 'info');
     }
 
@@ -611,7 +608,7 @@ class BaserowManager {
             const headers = this.ui.tableFields.map(field => field.name);
             const csvContent = [
                 headers.join(','),
-                ...this.ui.currentRecords.map(record => 
+                ...this.ui.currentRecords.map(record =>
                     headers.map(header => {
                         const value = record[header];
                         // Escapar vírgulas e aspas
@@ -647,7 +644,7 @@ class BaserowManager {
     updateApiUrl() {
         const select = document.getElementById('apiUrlSelect');
         const input = document.getElementById('apiUrl');
-        
+
         if (select && input && select.value !== 'custom') {
             input.value = select.value;
         }
@@ -659,7 +656,7 @@ class BaserowManager {
     toggleTokenVisibility() {
         const tokenInput = document.getElementById('apiToken');
         const eyeIcon = document.getElementById('tokenEye');
-        
+
         if (tokenInput && eyeIcon) {
             if (tokenInput.type === 'password') {
                 tokenInput.type = 'text';
@@ -680,7 +677,7 @@ class BaserowManager {
             oficial: 'https://baserow.io/docs/apis%2Frest-api',
             vps: '#' // URL da documentação do VPS se disponível
         };
-        
+
         window.open(urls[currentSite] || urls.oficial, '_blank');
     }
 
@@ -708,8 +705,6 @@ class BaserowManager {
         this.ui.searchRecords();
     }
 
-<<<<<<< HEAD
-=======
     /**
      * Carregar configurações do usuário
      */
@@ -737,9 +732,9 @@ class BaserowManager {
                 if (config.m3u_url) document.getElementById('xtreamBaseUrl').value = config.m3u_url;
                 if (config.m3u_username) document.getElementById('xtreamUsername').value = config.m3u_username;
                 if (config.m3u_password) document.getElementById('xtreamPassword').value = config.m3u_password;
-                
+
                 this.ui.showAlert('Configurações do usuário carregadas.', 'info');
-                
+
                 const apiConfig = {
                     apiUrl: config.baserow_api_url,
                     token: config.baserow_api_token,
@@ -777,7 +772,7 @@ class BaserowManager {
                 this.ui.showAlert('Bem-vindo! Por favor, configure sua conexão Baserow.', 'info');
                 this.ui.toggleConfig();
             }
-            
+
             // Habilitar botões de envio no M3U Manager agora que a configuração está pronta
             if(this.m3uManager) {
                 this.m3uManager.updateSendButtonsState(true);
@@ -847,7 +842,6 @@ class BaserowManager {
         }
     }
 
->>>>>>> 21173c1 (Alterações falta Arrumar Mapeamento)
     // Aliases para métodos da UI (para compatibilidade)
     toggleConfig() { return this.ui.toggleConfig(); }
     testConnection() { return this.ui.testConnection(); }
