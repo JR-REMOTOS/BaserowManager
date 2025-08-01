@@ -34,13 +34,13 @@ class M3UManager {
             this.renderContent(true); // Re-renderizar com dados completos
         };
 
-        this.init();
+        this.setupEventListeners();
+        this.initializeStatusIndicator();
+        console.log('[M3U] M3U Manager instanciado');
     }
 
     async init() {
-        this.setupEventListeners();
-        this.initializeStatusIndicator();
-        console.log('[M3U] M3U Manager inicializado');
+        console.log('[M3U] M3U Manager inicializando...');
         await this.loadM3UContentFromDB();
     }
 

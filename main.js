@@ -50,6 +50,9 @@ class BaserowManager {
             // Carregar configurações do usuário
             await this.loadUserConfig();
 
+            // Agora, inicialize o M3U manager, que tentará carregar o conteúdo do cache
+            await this.m3uManager.init();
+
             this.isInitialized = true;
             console.log('[App] Aplicação inicializada com sucesso');
             
@@ -773,10 +776,6 @@ class BaserowManager {
                 this.ui.toggleConfig();
             }
             
-            // Habilitar botões de envio no M3U Manager agora que a configuração está pronta
-            if(this.m3uManager) {
-                this.m3uManager.updateSendButtonsState(true);
-            }
         } catch (error) {
             console.error('[App] Erro ao carregar configurações do usuário:', error);
             this.ui.showAlert('Não foi possível carregar as configurações do usuário.', 'warning');
