@@ -484,7 +484,14 @@ class M3UManager {
     }
 
     async saveM3UContentToDB() {
-        if (!this.currentPlaylist || this.currentPlaylist.length === 0) {
+        // Combine all processed items into a single list for saving
+        const allItems = [
+            ...this.processedContent.movies,
+            ...Object.values(this.processedContent.series).flatMap(s => s.episodes),
+            ...this.processedContent.channels
+        ];
+
+        if (allItems.length === 0) {
             return;
         }
 
@@ -495,7 +502,7 @@ class M3UManager {
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(this.currentPlaylist)
+                body: JSON.stringify(allItems)
             });
 
             const result = await response.json();
