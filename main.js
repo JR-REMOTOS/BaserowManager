@@ -710,7 +710,7 @@ class BaserowManager {
      */
     async loadUserConfig() {
         try {
-            const response = await fetch('load_config.php');
+            const response = await fetch('load_config_global.php');
             const result = await response.json();
 
             if (result.success && result.data) {
@@ -821,7 +821,7 @@ class BaserowManager {
                 m3u_password: document.getElementById('xtreamPassword').value
             };
 
-            const response = await fetch('save_config.php', {
+            const response = await fetch('save_config_global.php', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
