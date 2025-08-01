@@ -755,6 +755,13 @@ class BaserowManager {
                 };
                 this.api.setConfig(apiConfig);
 
+                // Automatizar o teste de conexão se a configuração estiver presente
+                if (apiConfig.apiUrl && apiConfig.token) {
+                    this.ui.showAlert('Configuração encontrada. Testando conexão automaticamente...', 'info');
+                    // A função testConnection da UI já lida com o progresso e alertas
+                    await this.ui.testConnection();
+                }
+
                 // Preencher os dropdowns de mapeamento com os campos corretos
                 if (apiConfig.conteudosTableId) {
                     const fields = await this.api.loadTableFields(apiConfig.conteudosTableId);
