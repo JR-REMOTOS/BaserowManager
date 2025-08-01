@@ -846,6 +846,8 @@ class BaserowManager {
                 };
             }
 
+            console.log("DEBUG: Saving config data:", data);
+
             const response = await fetch('save_config.php', {
                 method: 'POST',
                 headers: {
@@ -859,6 +861,7 @@ class BaserowManager {
             if (result.success) {
                 this.ui.showAlert('Configurações salvas no servidor.', 'success');
                 const isCompleted = Object.keys(data.mapping_conteudos || {}).length > 0 && Object.keys(data.mapping_episodios || {}).length > 0;
+                console.log("DEBUG: isCompleted check:", isCompleted);
                 this.updateUIMappingStatus(isCompleted);
             } else {
                 this.ui.showAlert(`Erro ao salvar configurações no servidor: ${result.message}`, 'danger');
