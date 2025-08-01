@@ -234,44 +234,47 @@ class UIManager {
         container.innerHTML = html;
     }
 
-    async testConnection() {
-        const mappingConteudos = {};
-        document.querySelectorAll('[data-mapping="conteudos"]').forEach(input => {
-            if (input.value) {
-                mappingConteudos[input.name] = input.value;
-            }
-        });
+    async testConnection(isAuto = false) {
+        // Se for um teste manual do usuário, primeiro pegamos os dados mais recentes da UI
+        // e atualizamos o estado da configuração.
+        if (!isAuto) {
+            const mappingConteudos = {};
+            document.querySelectorAll('[data-mapping="conteudos"] select').forEach(select => {
+                if (select.value) mappingConteudos[select.name] = select.value;
+            });
 
-        const mappingEpisodios = {};
-        document.querySelectorAll('[data-mapping="episodios"]').forEach(input => {
-            if (input.value) {
-                mappingEpisodios[input.name] = input.value;
-            }
-        });
+            const mappingEpisodios = {};
+            document.querySelectorAll('[data-mapping="episodios"] select').forEach(select => {
+                if (select.value) mappingEpisodios[select.name] = select.value;
+            });
 
-        const config = {
-            apiUrl: document.getElementById('apiUrl')?.value?.trim(),
-            token: document.getElementById('apiToken')?.value?.trim(),
-            conteudosTableId: document.getElementById('conteudosTableId')?.value?.trim(),
-            categoriasTableId: document.getElementById('categoriasTableId')?.value?.trim(),
-            episodiosTableId: document.getElementById('episodiosTableId')?.value?.trim(),
-            usuariosTableId: document.getElementById('usuariosTableId')?.value?.trim(),
-            bannersTableId: document.getElementById('bannersTableId')?.value?.trim(),
-            canaisTableId: document.getElementById('canaisTableId')?.value?.trim(),
-            pagamentosTableId: document.getElementById('pagamentosTableId')?.value?.trim(),
-            planosTableId: document.getElementById('planosTableId')?.value?.trim(),
-            tvCategoriaTableId: document.getElementById('tvCategoriaTableId')?.value?.trim(),
-            mapping_conteudos: mappingConteudos,
-            mapping_episodios: mappingEpisodios
-        };
+            const configFromUI = {
+                apiUrl: document.getElementById('apiUrl')?.value?.trim(),
+                token: document.getElementById('apiToken')?.value?.trim(),
+                conteudosTableId: document.getElementById('conteudosTableId')?.value?.trim(),
+                categoriasTableId: document.getElementById('categoriasTableId')?.value?.trim(),
+                episodiosTableId: document.getElementById('episodiosTableId')?.value?.trim(),
+                usuariosTableId: document.getElementById('usuariosTableId')?.value?.trim(),
+                bannersTableId: document.getElementById('bannersTableId')?.value?.trim(),
+                canaisTableId: document.getElementById('canaisTableId')?.value?.trim(),
+                pagamentosTableId: document.getElementById('pagamentosTableId')?.value?.trim(),
+                planosTableId: document.getElementById('planosTableId')?.value?.trim(),
+                tvCategoriaTableId: document.getElementById('tvCategoriaTableId')?.value?.trim(),
+                mapping_conteudos: mappingConteudos,
+                mapping_episodios: mappingEpisodios
+            };
+            this.api.setConfig(configFromUI);
+        }
 
-        if (!config.apiUrl || !config.token) {
+        // Usamos a configuração que está no 'api' como a fonte da verdade.
+        const authoritativeConfig = this.api.config;
+
+        if (!authoritativeConfig.apiUrl || !this.api.token) {
             this.showAlert('URL da API e Token são obrigatórios.', 'warning');
             return;
         }
 
         this.showProgress('Testando Conexão', 'Verificando credenciais e tabelas...');
-        this.api.setConfig(config);
 
         const result = await this.api.testConnection();
 
@@ -282,19 +285,29 @@ class UIManager {
             const tables = this.api.loadTables();
             this.renderTables(tables);
 
-            // Carregar campos e popular dropdowns
-            if (config.conteudosTableId) {
-                const fields = await this.api.loadTableFields(config.conteudosTableId);
-                this.populateMappingDropdowns(fields, 'conteudos', config.mapping_conteudos);
+            // Carregar campos e popular dropdowns usando a configuração autoritativa
+            if (authoritativeConfig.conteudosTableId) {
+                const fields = await this.api.loadTableFields(authoritativeConfig.conteudosTableId);
+                this.populateMappingDropdowns(fields, 'conteudos', authoritativeConfig.mapping_conteudos);
             }
-            if (config.episodiosTableId) {
-                const fields = await this.api.loadTableFields(config.episodiosTableId);
-                this.populateMappingDropdowns(fields, 'episodios', config.mapping_episodios || {});
+            if (authoritativeConfig.episodiosTableId) {
+                const fields = await this.api.loadTableFields(authoritativeConfig.episodiosTableId);
+                this.populateMappingDropdowns(fields, 'episodios', authoritativeConfig.mapping_episodios);
             }
             
             this.hideProgress();
-            this.hideConfig();
-            this.saveConfig();
+
+            // Ações específicas para teste manual
+            if (!isAuto) {
+                this.hideConfig();
+                await this.saveConfig(); // Salva apenas em teste manual
+            }
+
+            // Sempre verificar o estado dos botões M3U após um teste bem-sucedido
+            if (window.app && window.app.m3uManager) {
+                window.app.m3uManager.checkAndEnableButtons();
+            }
+
         } else {
             this.hideProgress();
             this.showAlert(`Erro na conexão: ${result.error}`, 'danger');

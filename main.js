@@ -759,7 +759,7 @@ class BaserowManager {
                 if (apiConfig.apiUrl && apiConfig.token) {
                     this.ui.showAlert('Configuração encontrada. Testando conexão automaticamente...', 'info');
                     // A função testConnection da UI já lida com o progresso e alertas
-                    await this.ui.testConnection();
+                    await this.ui.testConnection(true); // Chamar como teste automático
                 }
 
                 // Preencher os dropdowns de mapeamento com os campos corretos
@@ -850,7 +850,7 @@ class BaserowManager {
 
     // Aliases para métodos da UI (para compatibilidade)
     toggleConfig() { return this.ui.toggleConfig(); }
-    testConnection() { return this.ui.testConnection(); }
+    async testConnection() { return await this.ui.testConnection(false); } // Chamar como teste manual
     quickTest() { return this.ui.quickTest(); }
 }
 
