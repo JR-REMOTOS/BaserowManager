@@ -788,40 +788,63 @@ class BaserowManager {
     /**
      * Salvar configurações do usuário
      */
-    async saveUserConfig() {
+    async saveUserConfig(configData = null) {
         try {
-            const mappingConteudos = {};
-            document.querySelectorAll('[data-mapping="conteudos"] select').forEach(select => {
-                if (select.value) {
-                    mappingConteudos[select.name] = select.value;
-                }
-            });
+            let data;
+            if (configData) {
+                // Se a config for passada, usar os dados diretamente, mas mapear para as chaves do backend
+                data = {
+                    baserow_api_url: configData.apiUrl,
+                    baserow_api_token: configData.token,
+                    conteudos_table_id: configData.conteudosTableId,
+                    categorias_table_id: configData.categoriasTableId,
+                    episodios_table_id: configData.episodiosTableId,
+                    banners_table_id: configData.bannersTableId,
+                    usuarios_table_id: configData.usuariosTableId,
+                    canais_table_id: configData.canaisTableId,
+                    pagamentos_table_id: configData.pagamentosTableId,
+                    planos_table_id: configData.planosTableId,
+                    tv_categoria_table_id: configData.tvCategoriaTableId,
+                    mapping_conteudos: configData.mapping_conteudos,
+                    mapping_episodios: configData.mapping_episodios,
+                    m3u_url: document.getElementById('xtreamBaseUrl').value,
+                    m3u_username: document.getElementById('xtreamUsername').value,
+                    m3u_password: document.getElementById('xtreamPassword').value
+                };
+            } else {
+                // Fallback para ler o formulário
+                const mappingConteudos = {};
+                document.querySelectorAll('[data-mapping="conteudos"] select').forEach(select => {
+                    if (select.value) {
+                        mappingConteudos[select.name] = select.value;
+                    }
+                });
 
-            const mappingEpisodios = {};
-            document.querySelectorAll('[data-mapping="episodios"] select').forEach(select => {
-                if (select.value) {
-                    mappingEpisodios[select.name] = select.value;
-                }
-            });
-
-            const data = {
-                baserow_api_url: document.getElementById('apiUrl').value,
-                baserow_api_token: document.getElementById('apiToken').value,
-                conteudos_table_id: document.getElementById('conteudosTableId').value,
-                categorias_table_id: document.getElementById('categoriasTableId').value,
-                episodios_table_id: document.getElementById('episodiosTableId').value,
-                banners_table_id: document.getElementById('bannersTableId').value,
-                usuarios_table_id: document.getElementById('usuariosTableId').value,
-                canais_table_id: document.getElementById('canaisTableId').value,
-                pagamentos_table_id: document.getElementById('pagamentosTableId').value,
-                planos_table_id: document.getElementById('planosTableId').value,
-                tv_categoria_table_id: document.getElementById('tvCategoriaTableId').value,
-                mapping_conteudos: mappingConteudos,
-                mapping_episodios: mappingEpisodios,
-                m3u_url: document.getElementById('xtreamBaseUrl').value,
-                m3u_username: document.getElementById('xtreamUsername').value,
-                m3u_password: document.getElementById('xtreamPassword').value
-            };
+                const mappingEpisodios = {};
+                document.querySelectorAll('[data-mapping="episodios"] select').forEach(select => {
+                    if (select.value) {
+                        mappingEpisodios[select.name] = select.value;
+                    }
+                });
+                data = {
+                    baserow_api_url: document.getElementById('apiUrl').value,
+                    baserow_api_token: document.getElementById('apiToken').value,
+                    conteudos_table_id: document.getElementById('conteudosTableId').value,
+                    categorias_table_id: document.getElementById('categoriasTableId').value,
+                    episodios_table_id: document.getElementById('episodiosTableId').value,
+                    banners_table_id: document.getElementById('bannersTableId').value,
+                    usuarios_table_id: document.getElementById('usuariosTableId').value,
+                    canais_table_id: document.getElementById('canaisTableId').value,
+                    pagamentos_table_id: document.getElementById('pagamentosTableId').value,
+                    planos_table_id: document.getElementById('planosTableId').value,
+                    tv_categoria_table_id: document.getElementById('tvCategoriaTableId').value,
+                    mapping_conteudos: mappingConteudos,
+                    mapping_episodios: mappingEpisodios,
+                    m3u_url: document.getElementById('xtreamBaseUrl').value,
+                    m3u_username: document.getElementById('xtreamUsername').value,
+                    m3u_password: document.getElementById('xtreamPassword').value
+                };
+            }
 
             const response = await fetch('save_config.php', {
                 method: 'POST',
@@ -835,11 +858,10 @@ class BaserowManager {
 
             if (result.success) {
                 this.ui.showAlert('Configurações salvas no servidor.', 'success');
-                // Atualizar o status do mapeamento na UI
-                const isCompleted = Object.keys(mappingConteudos).length > 0 && Object.keys(mappingEpisodios).length > 0;
+                const isCompleted = Object.keys(data.mapping_conteudos || {}).length > 0 && Object.keys(data.mapping_episodios || {}).length > 0;
                 this.updateUIMappingStatus(isCompleted);
             } else {
-                this.ui.showAlert('Erro ao salvar configurações no servidor.', 'danger');
+                this.ui.showAlert(`Erro ao salvar configurações no servidor: ${result.message}`, 'danger');
             }
         } catch (error) {
             console.error('[App] Erro ao salvar configurações do usuário:', error);

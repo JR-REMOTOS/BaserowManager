@@ -236,14 +236,14 @@ class UIManager {
 
     async testConnection(isAutomatic = false) {
         const mappingConteudos = {};
-        document.querySelectorAll('[data-mapping="conteudos"]').forEach(input => {
+        document.querySelectorAll('[data-mapping="conteudos"] select').forEach(input => {
             if (input.value) {
                 mappingConteudos[input.name] = input.value;
             }
         });
 
         const mappingEpisodios = {};
-        document.querySelectorAll('[data-mapping="episodios"]').forEach(input => {
+        document.querySelectorAll('[data-mapping="episodios"] select').forEach(input => {
             if (input.value) {
                 mappingEpisodios[input.name] = input.value;
             }
@@ -298,7 +298,7 @@ class UIManager {
             if (!isAutomatic) {
                 this.hideConfig();
             }
-            this.saveConfig();
+            this.saveConfig(config);
         } else {
             this.hideProgress();
             this.showAlert(`Erro na conexão: ${result.error}`, 'danger');
@@ -705,9 +705,9 @@ class UIManager {
     }
 
     // Salvar configuração
-    async saveConfig() {
+    async saveConfig(configData = null) {
         if (window.app && typeof window.app.saveUserConfig === 'function') {
-            await window.app.saveUserConfig();
+            await window.app.saveUserConfig(configData);
         } else {
             console.error("saveUserConfig function not found on global app object.");
         }
