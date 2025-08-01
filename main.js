@@ -735,6 +735,9 @@ class BaserowManager {
                 
                 this.ui.showAlert('Configurações do usuário carregadas.', 'info');
                 
+                const mappingConteudos = JSON.parse(config.mapping_conteudos || '{}');
+                const mappingEpisodios = JSON.parse(config.mapping_episodios || '{}');
+
                 const apiConfig = {
                     apiUrl: config.baserow_api_url,
                     token: config.baserow_api_token,
@@ -747,19 +750,19 @@ class BaserowManager {
                     pagamentosTableId: config.pagamentos_table_id,
                     planosTableId: config.planos_table_id,
                     tvCategoriaTableId: config.tv_categoria_table_id,
-                    mapping_conteudos: JSON.parse(config.mapping_conteudos || '{}'),
-                    mapping_episodios: JSON.parse(config.mapping_episodios || '{}')
+                    mapping_conteudos: mappingConteudos,
+                    mapping_episodios: mappingEpisodios
                 };
                 this.api.setConfig(apiConfig);
 
                 // Preencher os dropdowns de mapeamento com os campos corretos
                 if (apiConfig.conteudosTableId) {
                     const fields = await this.api.loadTableFields(apiConfig.conteudosTableId);
-                    this.ui.populateMappingDropdowns(fields, 'conteudos', apiConfig.mapping_conteudos);
+                    this.ui.populateMappingDropdowns(fields, 'conteudos', mappingConteudos);
                 }
                 if (apiConfig.episodiosTableId) {
                     const fields = await this.api.loadTableFields(apiConfig.episodiosTableId);
-                    this.ui.populateMappingDropdowns(fields, 'episodios', apiConfig.mapping_episodios);
+                    this.ui.populateMappingDropdowns(fields, 'episodios', mappingEpisodios);
                 }
 
                 // Se não houver token, abrir o painel de configuração
@@ -850,10 +853,11 @@ class BaserowManager {
      */
     updateUIMappingStatus(isCompleted) {
         if (isCompleted) {
-            this.ui.showAlert('Mapeamento carregado. Você pode adicionar conteúdo.', 'success');
+            this.ui.showAlert('Configuração de mapeamento encontrada. Conectando automaticamente...', 'info');
             if (this.m3uManager) {
                 this.m3uManager.updateSendButtonsState(true);
             }
+            this.ui.testConnection(true); // Trigger auto-connection
         } else {
             this.ui.showAlert('Por favor, complete a configuração e o mapeamento de campos para habilitar o envio de conteúdo.', 'warning');
             if (this.m3uManager) {

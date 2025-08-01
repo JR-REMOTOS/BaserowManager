@@ -234,7 +234,7 @@ class UIManager {
         container.innerHTML = html;
     }
 
-    async testConnection() {
+    async testConnection(isAutomatic = false) {
         const mappingConteudos = {};
         document.querySelectorAll('[data-mapping="conteudos"]').forEach(input => {
             if (input.value) {
@@ -277,7 +277,9 @@ class UIManager {
 
         if (result.success) {
             this.updateProgress(100, 'Conexão estabelecida!');
-            this.showAlert(result.message, 'success');
+            if (!isAutomatic) {
+                this.showAlert(result.message, 'success');
+            }
             
             const tables = this.api.loadTables();
             this.renderTables(tables);
@@ -293,7 +295,9 @@ class UIManager {
             }
             
             this.hideProgress();
-            this.hideConfig();
+            if (!isAutomatic) {
+                this.hideConfig();
+            }
             this.saveConfig();
         } else {
             this.hideProgress();
