@@ -762,15 +762,9 @@ class BaserowManager {
                     await this.ui.testConnection(true); // Chamar como teste automático
                 }
 
-                // Preencher os dropdowns de mapeamento com os campos corretos
-                if (apiConfig.conteudosTableId) {
-                    const fields = await this.api.loadTableFields(apiConfig.conteudosTableId);
-                    this.ui.populateMappingDropdowns(fields, 'conteudos', apiConfig.mapping_conteudos);
-                }
-                if (apiConfig.episodiosTableId) {
-                    const fields = await this.api.loadTableFields(apiConfig.episodiosTableId);
-                    this.ui.populateMappingDropdowns(fields, 'episodios', apiConfig.mapping_episodios);
-                }
+                // A lógica de preenchimento dos dropdowns agora é tratada exclusivamente
+                // pela função testConnection em ui.js para garantir que ocorra somente
+                // após uma conexão bem-sucedida.
 
                 // Se não houver token, abrir o painel de configuração
                 if (!config.baserow_api_token) {
