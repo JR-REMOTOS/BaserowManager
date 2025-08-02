@@ -153,6 +153,7 @@
             <div class="spinner-border mt-3" role="status">
                 <span class="visually-hidden">Carregando...</span>
             </div>
+            <p id="loaderMessage" class="mt-3 text-white-50">Inicializando...</p>
         </div>
     </div>
 
@@ -168,7 +169,7 @@
                             Baserow Manager
                         </h3>
                         <div id="siteInfo" class="text-center">
-                            <small class="text-white-50">Selecione um site para começar</small>
+                            <small class="text-white-50">Conecte-se para começar</small>
                         </div>
                     </div>
                     
@@ -272,9 +273,6 @@
                         <button type="button" class="btn-close btn-close-white" onclick="app.toggleConfig()"></button>
                     </div>
                     
-                    <div class="config-info alert alert-info mb-4">
-                        <!-- Informações do site serão inseridas aqui -->
-                    </div>
                     
                     <form id="configForm" class="position-relative">
                         <div class="row">
@@ -294,7 +292,7 @@
                                 </div>
                                 <div class="form-text text-white-50">
                                     <i class="fas fa-lightbulb"></i> 
-                                    Para obter o token: Baserow → Settings → API tokens → Create token
+                                    Para obter o token: Baserow → Configurações → Tokens da API → Criar token
                                 </div>
                             </div>
                         </div>
@@ -496,9 +494,9 @@
                                 <div class="card-body">
                                     <h6 class="card-title">Como começar:</h6>
                                     <ol class="text-start">
-                                        <li>Selecione o site Baserow (Oficial ou VPS)</li>
-                                        <li>Configure sua conexão com o token da API</li>
-                                        <li>Escolha uma tabela para visualizar e gerenciar dados</li>
+                                        <li>Configure sua conexão com a URL e o token da API</li>
+                                        <li>Forneça os IDs das tabelas que deseja gerenciar</li>
+                                        <li>Teste a conexão para carregar as tabelas</li>
                                         <li><strong>Novo:</strong> Use o M3U Manager para importar listas M3U</li>
                                     </ol>
                                     <button class="btn btn-primary btn-custom mt-2" onclick="app.toggleConfig()">
@@ -561,10 +559,10 @@
                 Suporte aos sites: Baserow Oficial e VPS Personalizado + M3U Import
             </p>
             <div class="mt-2">
-                <span class="badge bg-primary me-2">Versão 2.1</span>
-                <span class="badge bg-success me-2">Multi-Site</span>
+                <span class="badge bg-primary me-2">Versão 2.2</span>
+                <span class="badge bg-success me-2">Múltiplos Sites</span>
                 <span class="badge bg-info me-2">API REST</span>
-                <span class="badge bg-warning">M3U Import</span>
+                <span class="badge bg-warning">Importador M3U</span>
             </div>
         </div>
     </footer>
@@ -578,18 +576,6 @@
     
     <!-- Script para remover loader inicial -->
     <script>
-        // Remover loader após carregamento completo
-        window.addEventListener('load', function() {
-            setTimeout(function() {
-                const loader = document.getElementById('initialLoader');
-                if (loader) {
-                    loader.style.opacity = '0';
-                    loader.style.transition = 'opacity 0.5s ease-out';
-                    setTimeout(() => loader.remove(), 500);
-                }
-            }, 1000);
-        });
-
         // Fallback para browsers sem suporte a módulos ES6
         if (!window.customElements) {
             document.write('<script src="https://polyfill.io/v3/polyfill.min.js?features=es6,es2015,es2017"><\/script>');

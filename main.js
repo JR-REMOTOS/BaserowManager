@@ -26,6 +26,7 @@ class BaserowManager {
 
         try {
             console.log('[App] Inicializando aplicação...');
+            this.updateLoaderMessage('Preparando a interface...');
             
             // Aguardar DOM estar pronto
             if (document.readyState === 'loading') {
@@ -48,14 +49,45 @@ class BaserowManager {
             this.setupViewNavigation();
             
             // Carregar configurações do usuário
+            this.updateLoaderMessage('Carregando configurações...');
             await this.loadUserConfig();
+
+            // Carregar conteúdo M3U do banco de dados, se existir
+            this.updateLoaderMessage('Carregando lista M3U salva...');
+            await this.m3uManager.loadM3UContentFromDB();
 
             this.isInitialized = true;
             console.log('[App] Aplicação inicializada com sucesso');
+            this.updateLoaderMessage('Pronto!');
+            this.hideInitialLoader();
             
         } catch (error) {
             console.error('[App] Erro na inicialização:', error);
             this.ui.showAlert('Erro ao inicializar aplicação: ' + error.message, 'danger');
+            this.hideInitialLoader(); // Ocultar o loader mesmo se houver erro
+        }
+    }
+
+    /**
+     * Atualiza a mensagem no loader inicial.
+     * @param {string} message - A mensagem a ser exibida.
+     */
+    updateLoaderMessage(message) {
+        const loaderMessage = document.getElementById('loaderMessage');
+        if (loaderMessage) {
+            loaderMessage.textContent = message;
+        }
+    }
+
+    /**
+     * Oculta e remove o loader inicial.
+     */
+    hideInitialLoader() {
+        const loader = document.getElementById('initialLoader');
+        if (loader) {
+            loader.style.opacity = '0';
+            loader.style.transition = 'opacity 0.5s ease-out';
+            setTimeout(() => loader.remove(), 500);
         }
     }
 
@@ -706,85 +738,169 @@ class BaserowManager {
     }
 
     /**
-     * Carregar configurações do usuário
+     * Aplica uma configuração à interface e à API.
+     * @param {object} config - O objeto de configuração.
      */
-    async loadUserConfig() {
-        try {
-            const response = await fetch('load_config.php');
-            const result = await response.json();
+    async applyConfig(config) {
+        // Preencher campos do Baserow
+        if (config.baserow_api_url) document.getElementById('apiUrl').value = config.baserow_api_url;
+        if (config.baserow_api_token) document.getElementById('apiToken').value = config.baserow_api_token;
+        if (config.conteudos_table_id) document.getElementById('conteudosTableId').value = config.conteudos_table_id;
+        if (config.categorias_table_id) document.getElementById('categoriasTableId').value = config.categorias_table_id;
+        if (config.episodios_table_id) document.getElementById('episodiosTableId').value = config.episodios_table_id;
+        if (config.banners_table_id) document.getElementById('bannersTableId').value = config.banners_table_id;
+        if (config.usuarios_table_id) document.getElementById('usuariosTableId').value = config.usuarios_table_id;
+        if (config.canais_table_id) document.getElementById('canaisTableId').value = config.canais_table_id;
+        if (config.pagamentos_table_id) document.getElementById('pagamentosTableId').value = config.pagamentos_table_id;
+        if (config.planos_table_id) document.getElementById('planosTableId').value = config.planos_table_id;
+        if (config.tv_categoria_table_id) document.getElementById('tvCategoriaTableId').value = config.tv_categoria_table_id;
 
-            if (result.success && result.data) {
-                const config = result.data;
-                // Preencher campos do Baserow
-                if (config.baserow_api_url) document.getElementById('apiUrl').value = config.baserow_api_url;
-                if (config.baserow_api_token) document.getElementById('apiToken').value = config.baserow_api_token;
-                if (config.conteudos_table_id) document.getElementById('conteudosTableId').value = config.conteudos_table_id;
-                if (config.categorias_table_id) document.getElementById('categoriasTableId').value = config.categorias_table_id;
-                if (config.episodios_table_id) document.getElementById('episodiosTableId').value = config.episodios_table_id;
-                if (config.banners_table_id) document.getElementById('bannersTableId').value = config.banners_table_id;
-                if (config.usuarios_table_id) document.getElementById('usuariosTableId').value = config.usuarios_table_id;
-                if (config.canais_table_id) document.getElementById('canaisTableId').value = config.canais_table_id;
-                if (config.pagamentos_table_id) document.getElementById('pagamentosTableId').value = config.pagamentos_table_id;
-                if (config.planos_table_id) document.getElementById('planosTableId').value = config.planos_table_id;
-                if (config.tv_categoria_table_id) document.getElementById('tvCategoriaTableId').value = config.tv_categoria_table_id;
+        // Preencher campos do M3U
+        if (config.m3u_url) document.getElementById('xtreamBaseUrl').value = config.m3u_url;
+        if (config.m3u_username) document.getElementById('xtreamUsername').value = config.m3u_username;
+        if (config.m3u_password) document.getElementById('xtreamPassword').value = config.m3u_password;
+        
+        this.ui.showAlert('Configurações carregadas.', 'info');
+        
+        const mappingConteudos = (typeof config.mapping_conteudos === 'string') ? JSON.parse(config.mapping_conteudos || '{}') : config.mapping_conteudos;
+        const mappingEpisodios = (typeof config.mapping_episodios === 'string') ? JSON.parse(config.mapping_episodios || '{}') : config.mapping_episodios;
 
-                // Preencher campos do M3U
-                if (config.m3u_url) document.getElementById('xtreamBaseUrl').value = config.m3u_url;
-                if (config.m3u_username) document.getElementById('xtreamUsername').value = config.m3u_username;
-                if (config.m3u_password) document.getElementById('xtreamPassword').value = config.m3u_password;
-                
-                this.ui.showAlert('Configurações do usuário carregadas.', 'info');
-                
-                const apiConfig = {
-                    apiUrl: config.baserow_api_url,
-                    token: config.baserow_api_token,
-                    conteudosTableId: config.conteudos_table_id,
-                    categoriasTableId: config.categorias_table_id,
-                    episodiosTableId: config.episodios_table_id,
-                    usuariosTableId: config.usuarios_table_id,
-                    bannersTableId: config.banners_table_id,
-                    canaisTableId: config.canais_table_id,
-                    pagamentosTableId: config.pagamentos_table_id,
-                    planosTableId: config.planos_table_id,
-                    tvCategoriaTableId: config.tv_categoria_table_id,
-                    mapping_conteudos: JSON.parse(config.mapping_conteudos || '{}'),
-                    mapping_episodios: JSON.parse(config.mapping_episodios || '{}')
-                };
-                this.api.setConfig(apiConfig);
+        const apiConfig = {
+            apiUrl: config.baserow_api_url,
+            token: config.baserow_api_token,
+            conteudosTableId: config.conteudos_table_id,
+            categoriasTableId: config.categorias_table_id,
+            episodiosTableId: config.episodios_table_id,
+            usuariosTableId: config.usuarios_table_id,
+            bannersTableId: config.banners_table_id,
+            canaisTableId: config.canais_table_id,
+            pagamentosTableId: config.pagamentos_table_id,
+            planosTableId: config.planos_table_id,
+            tvCategoriaTableId: config.tv_categoria_table_id,
+            mapping_conteudos: mappingConteudos || {},
+            mapping_episodios: mappingEpisodios || {}
+        };
+        this.api.setConfig(apiConfig);
 
-                // Preencher os dropdowns de mapeamento com os campos corretos
-                if (apiConfig.conteudosTableId) {
-                    const fields = await this.api.loadTableFields(apiConfig.conteudosTableId);
-                    this.ui.populateMappingDropdowns(fields, 'conteudos', apiConfig.mapping_conteudos);
-                }
-                if (apiConfig.episodiosTableId) {
-                    const fields = await this.api.loadTableFields(apiConfig.episodiosTableId);
-                    this.ui.populateMappingDropdowns(fields, 'episodios', apiConfig.mapping_episodios);
-                }
+        // Preencher os dropdowns de mapeamento com os campos corretos
+        if (apiConfig.conteudosTableId) {
+            const fields = await this.api.loadTableFields(apiConfig.conteudosTableId);
+            this.ui.populateMappingDropdowns(fields, 'conteudos', apiConfig.mapping_conteudos);
+        }
+        if (apiConfig.episodiosTableId) {
+            const fields = await this.api.loadTableFields(apiConfig.episodiosTableId);
+            this.ui.populateMappingDropdowns(fields, 'episodios', apiConfig.mapping_episodios);
+        }
+        
+        // Habilitar botões de envio no M3U Manager agora que a configuração está pronta
+        if(this.m3uManager) {
+            this.m3uManager.updateSendButtonsState(true);
+        }
 
-                // Se não houver token, abrir o painel de configuração
-                if (!config.baserow_api_token) {
-                    this.ui.showAlert('Bem-vindo! Por favor, configure sua conexão Baserow.', 'info');
-                    this.ui.toggleConfig();
-                }
+        // Se tiver token, tenta fazer um teste de conexão silencioso para carregar as tabelas
+        if (apiConfig.token) {
+            const result = await this.api.testConnection();
+            if (result.success) {
+                this.ui.showAlert('Conexão automática estabelecida com sucesso!', 'success');
+                const tables = this.api.loadTables();
+                this.ui.renderTables(tables);
             } else {
-                // Se não houver dados de configuração, abrir o painel
-                this.ui.showAlert('Bem-vindo! Por favor, configure sua conexão Baserow.', 'info');
-                this.ui.toggleConfig();
+                this.ui.showAlert('Falha na conexão automática. Verifique suas configurações.', 'warning');
             }
-            
-            // Habilitar botões de envio no M3U Manager agora que a configuração está pronta
-            if(this.m3uManager) {
-                this.m3uManager.updateSendButtonsState(true);
-            }
-        } catch (error) {
-            console.error('[App] Erro ao carregar configurações do usuário:', error);
-            this.ui.showAlert('Não foi possível carregar as configurações do usuário.', 'warning');
         }
     }
 
     /**
-     * Salvar configurações do usuário
+     * Carregar configurações do usuário, priorizando localStorage.
+     */
+    async loadUserConfig() {
+        // 1. Tentar carregar do localStorage
+        console.log('[App] Tentando carregar config. Conteúdo do localStorage:', localStorage.getItem('baserowConfig'));
+        const localConfigStr = localStorage.getItem('baserowConfig');
+        if (localConfigStr) {
+            console.log('[App] Carregando configuração do localStorage.');
+            try {
+                const localConfig = JSON.parse(localConfigStr);
+                await this.applyConfig(localConfig);
+                return;
+            } catch (error) {
+                console.error('[App] Erro ao analisar configuração do localStorage:', error);
+                localStorage.removeItem('baserowConfig');
+            }
+        }
+
+        // 2. Fallback para carregar do servidor (load_config.php)
+        console.log('[App] Nenhuma configuração local encontrada. Tentando carregar do servidor.');
+        try {
+            const response = await fetch('load_config.php');
+            const result = await response.json();
+
+            if (result.success && result.data && Object.keys(result.data).length > 1) {
+                console.log('[App] Carregando configuração do servidor.');
+                await this.applyConfig(result.data);
+            } else {
+                this.ui.showAlert('Bem-vindo! Por favor, configure sua conexão Baserow.', 'info');
+                this.ui.toggleConfig();
+            }
+        } catch (error) {
+            console.error('[App] Erro ao carregar configurações do servidor:', error);
+            this.ui.showAlert('Não foi possível carregar as configurações do servidor.', 'warning');
+            this.ui.toggleConfig();
+        }
+    }
+
+    /**
+     * Salva a configuração atual no localStorage do navegador.
+     */
+    saveConfigToLocalStorage() {
+        console.log('[App] Salvando configuração no localStorage.');
+        try {
+            const mappingConteudos = {};
+            document.querySelectorAll('#conteudosMappingContainer select').forEach(select => {
+                if (select.value) {
+                    mappingConteudos[select.name] = select.value;
+                }
+            });
+
+            const mappingEpisodios = {};
+            document.querySelectorAll('#episodiosMappingContainer select').forEach(select => {
+                if (select.value) {
+                    mappingEpisodios[select.name] = select.value;
+                }
+            });
+
+            const config = {
+                baserow_api_url: document.getElementById('apiUrl').value,
+                baserow_api_token: document.getElementById('apiToken').value,
+                conteudos_table_id: document.getElementById('conteudosTableId').value,
+                categorias_table_id: document.getElementById('categoriasTableId').value,
+                episodios_table_id: document.getElementById('episodiosTableId').value,
+                banners_table_id: document.getElementById('bannersTableId').value,
+                usuarios_table_id: document.getElementById('usuariosTableId').value,
+                canais_table_id: document.getElementById('canaisTableId').value,
+                pagamentos_table_id: document.getElementById('pagamentosTableId').value,
+                planos_table_id: document.getElementById('planosTableId').value,
+                tv_categoria_table_id: document.getElementById('tvCategoriaTableId').value,
+                mapping_conteudos: mappingConteudos,
+                mapping_episodios: mappingEpisodios,
+                m3u_url: document.getElementById('xtreamBaseUrl').value,
+                m3u_username: document.getElementById('xtreamUsername').value,
+                m3u_password: document.getElementById('xtreamPassword').value
+            };
+
+            const configStr = JSON.stringify(config);
+            localStorage.setItem('baserowConfig', configStr);
+            console.log('[App] Configuração salva:', configStr);
+            // Usar um alerta mais discreto para salvamentos automáticos
+            this.ui.showAlert('Configuração salva localmente!', 'success', 2500); 
+        } catch (error) {
+            console.error('[App] Erro ao salvar configuração no localStorage:', error);
+            this.ui.showAlert('Erro ao salvar configuração localmente.', 'danger');
+        }
+    }
+
+    /**
+     * Salvar configurações do usuário no servidor (opcional).
      */
     async saveUserConfig() {
         try {

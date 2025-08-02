@@ -41,7 +41,6 @@ class M3UManager {
         this.setupEventListeners();
         this.initializeStatusIndicator();
         console.log('[M3U] M3U Manager inicializado');
-        await this.loadM3UContentFromDB();
     }
 
     initializeStatusIndicator() {
@@ -112,6 +111,8 @@ class M3UManager {
                 this.toggleSelectAll();
             } else if (e.target.id === 'addSelectedItems') {
                 this.addSelectedItems();
+            } else if (e.target.classList.contains('add-all-from-tab')) {
+                this.addAllFromTab(e.target.dataset.tabName);
             }
         });
 
@@ -980,7 +981,15 @@ class M3UManager {
 
         const groupedMovies = this.groupBy(moviesToRender, 'category');
         
-        let html = Object.entries(groupedMovies).map(([category, movies]) => `
+        let html = `
+            <div class="d-flex justify-content-end mb-3">
+                <button class="btn btn-primary add-all-from-tab" data-tab-name="movies">
+                    <i class="fas fa-plus-circle me-2"></i>Adicionar Todos os Filmes (${this.processedContent.movies.length})
+                </button>
+            </div>
+        `;
+
+        html += Object.entries(groupedMovies).map(([category, movies]) => `
             <div class="category-section mb-4" data-category-group="movies">
                 <div class="category-header d-flex justify-content-between align-items-center mb-3">
                     <h6 class="mb-0">
@@ -988,7 +997,7 @@ class M3UManager {
                         <span class="badge bg-secondary ms-2">${movies.length}</span>
                     </h6>
                     <button class="btn btn-outline-success btn-sm add-all-items" data-category="movies-${category}" data-bs-toggle="tooltip" title="Adicionar todos os filmes desta categoria ao Baserow">
-                        <i class="fas fa-plus"></i> Adicionar Todos
+                        <i class="fas fa-plus"></i> Adicionar Todos da Categoria
                     </button>
                 </div>
                 <div class="row">
@@ -1013,7 +1022,15 @@ class M3UManager {
         const seriesToRender = seriesKeys.slice(0, this.batchSize);
         this.renderedCounts.series = seriesToRender.length;
         
-        let html = seriesToRender.map(seriesName => {
+        let html = `
+            <div class="d-flex justify-content-end mb-3">
+                <button class="btn btn-primary add-all-from-tab" data-tab-name="series">
+                    <i class="fas fa-plus-circle me-2"></i>Adicionar Todas as Séries (${Object.keys(this.processedContent.series).length})
+                </button>
+            </div>
+        `;
+
+        html += seriesToRender.map(seriesName => {
             const series = this.processedContent.series[seriesName];
             return `
                 <div class="series-section mb-4" data-category-group="series">
@@ -1027,7 +1044,7 @@ class M3UManager {
                         </div>
                         <div class="series-actions">
                             <button class="btn btn-outline-success btn-sm add-all-items me-2" data-category="series-${seriesName}" data-bs-toggle="tooltip" title="Adicionar todos os episódios desta série ao Baserow">
-                                <i class="fas fa-plus"></i> Adicionar Série
+                                <i class="fas fa-plus"></i> Adicionar Série Completa
                             </button>
                             <button class="btn btn-outline-primary btn-sm series-toggle" data-series-name="${seriesName}" data-bs-toggle="tooltip" title="Mostrar/esconder episódios">
                                 <i class="fas fa-chevron-down"></i> Episódios
@@ -1226,7 +1243,6 @@ class M3UManager {
 
         const itemType = this.getItemTypeForMapping(item);
         const isEpisode = itemType === 'episode';
-        
         const apiConfig = this.baserowManager.api.config;
         const tableId = isEpisode ? apiConfig.episodiosTableId : apiConfig.conteudosTableId;
         const tableName = isEpisode ? 'Episódios' : 'Conteúdos';
@@ -1234,6 +1250,18 @@ class M3UManager {
         if (!tableId) {
             this.showAlert(`⚠️ Tabela para "${itemType}" não encontrada na configuração.`, 'danger');
             return;
+        }
+
+        // Verificação de duplicados para filmes e séries
+        if (!isEpisode) {
+            const nameField = apiConfig.mapping_conteudos['Nome'];
+            if (nameField) {
+                const existingNames = await this.baserowManager.api.fetchAllRecordNames(tableId, nameField);
+                if (existingNames.has(item.name)) {
+                    this.showAlert(`ℹ️ Item "${item.name}" já existe no Baserow.`, 'info');
+                    return;
+                }
+            }
         }
 
         try {
@@ -1262,12 +1290,8 @@ class M3UManager {
     }
 
     async addAllItems(category) {
-        if (!this.baserowManager.api.config.conteudosTableId) {
-            this.showAlert('Por favor, configure o mapeamento de campos e os IDs das tabelas antes de adicionar itens.', 'warning');
-            return;
-        }
-
         const apiConfig = this.baserowManager.api.config;
+        const ui = this.baserowManager.ui;
         const moviesTableId = apiConfig.conteudosTableId;
         const episodesTableId = apiConfig.episodiosTableId;
 
@@ -1276,82 +1300,234 @@ class M3UManager {
             return;
         }
 
-        let items = [];
-        let isSeries = false;
-        let seriesName = '';
-
-        if (category.startsWith('movies-')) {
-            const catName = category.replace('movies-', '');
-            items = this.processedContent.movies.filter(item => (item.category || 'Outros') === catName);
-        } else if (category.startsWith('series-')) {
-            seriesName = category.replace('series-', '');
-            const series = this.processedContent.series[seriesName];
-            if (series) {
-                items = series.episodes;
-                isSeries = true;
-            }
-        }
-
-        if (items.length === 0) {
-            this.showAlert('⚠️ Nenhum item encontrado para adicionar', 'warning');
+        let isSeries = category.startsWith('series-');
+        const nameField = apiConfig.mapping_conteudos['Nome'];
+        if (!nameField) {
+            this.showAlert('Mapeamento para o campo "Nome" não encontrado na tabela de conteúdos.', 'danger');
             return;
         }
 
-        const confirm = window.confirm(`Deseja adicionar ${items.length} itens ao Baserow?`);
-        if (!confirm) return;
+        ui.showProgress('Verificando Duplicados', 'Buscando conteúdos existentes...');
+        const existingNames = await this.baserowManager.api.fetchAllRecordNames(moviesTableId, nameField);
+        
+        if (isSeries) {
+            const seriesName = category.replace('series-', '');
+            const seriesData = this.processedContent.series[seriesName];
+            if (!seriesData) {
+                this.showAlert(`Série "${seriesName}" não encontrada.`, 'danger');
+                ui.hideProgress();
+                return;
+            }
 
-        try {
-            this.setLoading(true);
-            let successCount = 0;
+            const confirm = window.confirm(`Deseja sincronizar a série "${seriesName}" (${seriesData.episodes.length} episódios)?`);
+            if (!confirm) {
+                ui.hideProgress();
+                return;
+            }
+
             let errorCount = 0;
-
-            this.showAlert(`🚀 Iniciando adição em massa de ${items.length} itens...`, 'info');
-
-            if (isSeries) {
-                const conteudosMapping = this.baserowManager.api.config.mapping_conteudos;
-                const seriesHeaderData = this.fieldMapper.mapSeriesHeader(this.processedContent.series[seriesName], conteudosMapping);
+            let successCount = 0;
+            
+            if (!existingNames.has(seriesData.name)) {
+                ui.updateProgress(0, `Adicionando nova série: ${seriesName}`);
+                const seriesHeaderData = this.fieldMapper.mapSeriesHeader(seriesData, apiConfig.mapping_conteudos);
                 for (const seasonData of seriesHeaderData) {
-                    try {
-                        await this.baserowManager.api.createRecord(moviesTableId, seasonData);
-                        this.showAlert(`✅ Entrada para "${seriesName}" (Temporada ${seasonData.Temporadas}) adicionada.`, 'success');
-                    } catch (error) {
-                        console.error(`[M3U] Erro ao adicionar cabeçalho da série "${seriesName}":`, error);
-                        this.showAlert(`❌ Erro ao adicionar entrada para "${seriesName}": ${this.getErrorMessage(error)}`, 'danger');
+                    await this.baserowManager.api.createRecord(moviesTableId, seasonData).catch(e => errorCount++);
+                }
+                // Se a série é nova, todos os episódios são novos
+                await this.processItemsInBulk(seriesData.episodes, 'episode', episodesTableId, `episódios de ${seriesName}`, 0, `Enviando episódio`);
+            } else {
+                this.showAlert(`Série "${seriesName}" já existe, sincronizando episódios...`, 'info', 2000);
+                ui.updateProgress(0, `Verificando episódios para ${seriesName}...`);
+                const episodeNameField = apiConfig.mapping_episodios['Nome'];
+                const seasonField = apiConfig.mapping_episodios['Temporadas'];
+                const episodeNumField = apiConfig.mapping_episodios['Episódio'];
+                
+                const existingEpisodeIds = await this.baserowManager.api.fetchExistingEpisodeIds(episodesTableId, episodeNameField, seasonField, episodeNumField);
+                const newEpisodes = seriesData.episodes.filter(ep => !existingEpisodeIds.has(this.getEpisodeIdentifier(seriesData.name, ep.season, ep.episode)));
+                const skippedCount = seriesData.episodes.length - newEpisodes.length;
+
+                if (newEpisodes.length === 0) {
+                    this.showAlert(`✅ Nenhum episódio novo para "${seriesName}".`, 'success');
+                    ui.hideProgress();
+                    return;
+                }
+                await this.processItemsInBulk(newEpisodes, 'episode', episodesTableId, `episódios de ${seriesName}`, skippedCount, `Enviando episódio`);
+            }
+        } else { // Lógica para filmes
+            const catName = category.replace('movies-', '');
+            const items = this.processedContent.movies.filter(item => (item.group || 'Sem categoria') === catName);
+            const newItems = items.filter(item => !existingNames.has(item.name));
+            const skippedCount = items.length - newItems.length;
+
+            if (newItems.length === 0) {
+                this.showAlert(`✅ Todos os filmes de "${catName}" já existem.`, 'info');
+                ui.hideProgress();
+                return;
+            }
+
+            const confirm = window.confirm(`Encontrados ${newItems.length} filmes novos em "${catName}" (${skippedCount} já existem). Deseja adicionar?`);
+            if (!confirm) {
+                ui.hideProgress();
+                return;
+            }
+            await this.processItemsInBulk(newItems, 'movie', moviesTableId, `filmes de ${catName}`, skippedCount, `Enviando filme`);
+        }
+    }
+
+    async addAllFromTab(tabName) {
+        const apiConfig = this.baserowManager.api.config;
+        const moviesTableId = apiConfig.conteudosTableId;
+        const episodesTableId = apiConfig.episodiosTableId;
+        const ui = this.baserowManager.ui;
+
+        if (!moviesTableId || !episodesTableId) {
+            this.showAlert('⚠️ IDs das tabelas de conteúdos e episódios devem ser configurados.', 'danger');
+            return;
+        }
+
+        const nameField = apiConfig.mapping_conteudos['Nome'];
+        if (!nameField) {
+            this.showAlert('Mapeamento para o campo "Nome" não encontrado na tabela de conteúdos.', 'danger');
+            return;
+        }
+
+        ui.showProgress('Verificando Duplicados', 'Buscando conteúdos existentes...');
+        const existingNames = await this.baserowManager.api.fetchAllRecordNames(moviesTableId, nameField);
+        
+        if (tabName === 'movies') {
+            const movies = this.processedContent.movies.filter(m => !existingNames.has(m.name));
+            const skippedCount = this.processedContent.movies.length - movies.length;
+
+            if (movies.length === 0) {
+                this.showAlert('✅ Todos os filmes já existem no Baserow.', 'info');
+                ui.hideProgress();
+                return;
+            }
+            const confirm = window.confirm(`Encontrados ${movies.length} filmes novos para adicionar (${skippedCount} já existem). Deseja continuar?`);
+            if (!confirm) {
+                ui.hideProgress();
+                return;
+            }
+            
+            await this.processItemsInBulk(movies, 'movie', moviesTableId, 'filmes', skippedCount);
+
+        } else if (tabName === 'series') {
+            const allSeries = Object.values(this.processedContent.series);
+            if (allSeries.length === 0) {
+                this.showAlert('⚠️ Nenhuma série para adicionar.', 'warning');
+                ui.hideProgress();
+                return;
+            }
+            
+            const confirm = window.confirm(`Deseja verificar ${allSeries.length} séries e adicionar as novas junto com seus episódios?`);
+            if (!confirm) {
+                ui.hideProgress();
+                return;
+            }
+
+            try {
+                ui.updateProgress(0, 'Buscando episódios existentes...');
+                const episodeNameField = apiConfig.mapping_episodios['Nome'];
+                const seasonField = apiConfig.mapping_episodios['Temporadas'];
+                const episodeNumField = apiConfig.mapping_episodios['Episódio'];
+                const existingEpisodeIds = await this.baserowManager.api.fetchExistingEpisodeIds(episodesTableId, episodeNameField, seasonField, episodeNumField);
+
+                let seriesProcessed = 0;
+                let episodesAdded = 0;
+                let seriesSkipped = 0;
+                let episodesSkipped = 0;
+                let errors = 0;
+
+                for (const series of allSeries) {
+                    seriesProcessed++;
+                    ui.updateProgress(
+                        Math.round((seriesProcessed / allSeries.length) * 100),
+                        `Processando série ${seriesProcessed} de ${allSeries.length}: ${series.name}`
+                    );
+
+                    if (!existingNames.has(series.name)) {
+                        // Adiciona nova série e todos os seus episódios
+                        const seriesHeaderData = this.fieldMapper.mapSeriesHeader(series, apiConfig.mapping_conteudos);
+                        for (const seasonData of seriesHeaderData) {
+                            await this.baserowManager.api.createRecord(moviesTableId, seasonData).catch(e => errors++);
+                        }
+                        for (const episode of series.episodes) {
+                            try {
+                                await this.baserowManager.api.createRecord(episodesTableId, this.formatItemForBaserow(episode, 'episode'));
+                                episodesAdded++;
+                            } catch (error) { errors++; }
+                        }
+                    } else {
+                        // Sincroniza episódios de série existente
+                        seriesSkipped++;
+                        const newEpisodes = series.episodes.filter(ep => {
+                            const episodeId = this.getEpisodeIdentifier(series.name, ep.season, ep.episode);
+                            return !existingEpisodeIds.has(episodeId);
+                        });
+                        
+                        episodesSkipped += series.episodes.length - newEpisodes.length;
+
+                        for (const episode of newEpisodes) {
+                            try {
+                                await this.baserowManager.api.createRecord(episodesTableId, this.formatItemForBaserow(episode, 'episode'));
+                                episodesAdded++;
+                            } catch (error) { errors++; }
+                        }
                     }
                 }
+                
+                const message = `🎉 Processo concluído! ${episodesAdded} episódios adicionados. ` +
+                                `${seriesSkipped > 0 ? `(${seriesSkipped} séries já existiam). ` : ''}` +
+                                `${episodesSkipped > 0 ? `(${episodesSkipped} episódios já existiam). ` : ''}` +
+                                `${errors > 0 ? `(${errors} erros)` : ''}`;
+                this.showAlert(message, 'success');
+
+            } catch (error) {
+                this.showAlert(`❌ Erro na adição em massa de séries: ${this.getErrorMessage(error)}`, 'danger');
+            } finally {
+                ui.hideProgress();
             }
+
+        } else {
+            this.showAlert('⚠️ Aba desconhecida para adição em massa.', 'warning');
+            ui.hideProgress();
+        }
+    }
+
+    async processItemsInBulk(items, itemType, tableId, tabName, skippedCount = 0) {
+        const ui = this.baserowManager.ui;
+        try {
+            ui.showProgress(`Adicionando ${tabName}`, `Enviando ${items.length} itens...`);
+            let successCount = 0;
+            let errorCount = 0;
+            let processedCount = 0;
 
             for (const item of items) {
                 try {
-                    const itemType = isSeries ? 'episode' : 'movie';
-                    const tableId = isSeries ? episodesTableId : moviesTableId;
                     const formattedData = this.formatItemForBaserow(item, itemType);
                     await this.baserowManager.api.createRecord(tableId, formattedData);
                     successCount++;
-                    
-                    const checkbox = document.getElementById(`item-${item.id}`);
-                    if (checkbox) {
-                        checkbox.checked = false;
-                        checkbox.disabled = true;
-                        checkbox.parentElement.parentElement.parentElement.style.opacity = '0.6';
-                    }
                 } catch (error) {
                     console.error('[M3U] Erro ao adicionar item:', item.name, error);
                     errorCount++;
                 }
+                processedCount++;
+                const percentage = Math.round((processedCount / items.length) * 100);
+                ui.updateProgress(percentage, `Enviando ${processedCount} de ${items.length}...`);
             }
 
-            const message = successCount > 0 ?
-                `🎉 ${successCount} itens adicionados com sucesso!` + (errorCount > 0 ? ` (❌ ${errorCount} falharam)` : '') :
-                `❌ Falha ao adicionar itens.`;
+            const message = `🎉 ${successCount} ${tabName} adicionados! ` +
+                            `${skippedCount > 0 ? `(ℹ️ ${skippedCount} já existiam) ` : ''}` +
+                            `${errorCount > 0 ? `(❌ ${errorCount} falharam)` : ''}`;
             
-            this.showAlert(message, successCount > 0 ? 'success' : 'danger');
-            
+            this.showAlert(message, successCount > 0 ? 'success' : 'info');
+
         } catch (error) {
-            console.error('[M3U] Erro na adição em massa:', error);
-            this.showAlert('❌ Erro na adição em massa: ' + this.getErrorMessage(error), 'danger');
+            console.error(`[M3U] Erro na adição em massa de ${tabName}:`, error);
+            this.showAlert(`❌ Erro na adição em massa: ${this.getErrorMessage(error)}`, 'danger');
         } finally {
-            this.setLoading(false);
+            ui.hideProgress();
         }
     }
 
@@ -1361,8 +1537,7 @@ class M3UManager {
             return;
         }
 
-        const selectedCheckboxes = document.querySelectorAll('.item-checkbox:checked');
-        if (selectedCheckboxes.length === 0) {
+        if (this.selectedItems.size === 0) {
             this.showAlert('⚠️ Selecione pelo menos um item', 'warning');
             return;
         }
@@ -1370,57 +1545,84 @@ class M3UManager {
         const apiConfig = this.baserowManager.api.config;
         const moviesTableId = apiConfig.conteudosTableId;
         const episodesTableId = apiConfig.episodiosTableId;
+        const ui = this.baserowManager.ui;
 
         if (!moviesTableId || !episodesTableId) {
             this.showAlert('⚠️ IDs das tabelas de conteúdos ou episódios não encontrados na configuração.', 'danger');
             return;
         }
 
-        const confirm = window.confirm(`Deseja adicionar ${selectedCheckboxes.length} itens selecionados ao Baserow?`);
+        const nameField = apiConfig.mapping_conteudos['Nome'];
+        if (!nameField) {
+            this.showAlert('Mapeamento para o campo "Nome" não encontrado na tabela de conteúdos.', 'danger');
+            return;
+        }
+
+        const confirm = window.confirm(`Deseja adicionar ${this.selectedItems.size} itens selecionados ao Baserow?`);
         if (!confirm) return;
 
+        ui.showProgress('Verificando Duplicados', 'Buscando conteúdos existentes...');
+        const existingNames = await this.baserowManager.api.fetchAllRecordNames(moviesTableId, nameField);
+
         try {
-            this.setLoading(true);
+            ui.showProgress('Adicionando Itens Selecionados', `Iniciando envio...`);
             let successCount = 0;
             let errorCount = 0;
+            let skippedCount = 0;
+            let processedCount = 0;
 
-            this.showAlert(`🚀 Adicionando ${selectedCheckboxes.length} itens selecionados...`, 'info');
+            for (const itemId of this.selectedItems) {
+                const item = this.findItemById(itemId);
+                if (!item) continue;
 
-            for (const checkbox of selectedCheckboxes) {
-                try {
-                    const item = this.findItemById(checkbox.value);
-                    if (item) {
-                        const itemType = this.getItemTypeForMapping(item);
-                        const isEpisode = itemType === 'episode';
-                        const tableId = isEpisode ? episodesTableId : moviesTableId;
-
-                        const formattedData = this.formatItemForBaserow(item, itemType);
-                        await this.baserowManager.api.createRecord(tableId, formattedData);
+                const itemType = this.getItemTypeForMapping(item);
+                const isEpisode = itemType === 'episode';
+                
+                if (!isEpisode && existingNames.has(item.name)) {
+                    skippedCount++;
+                } else if (isEpisode) {
+                    // Para episódios, não verificamos duplicados aqui, pois a sincronização de série já faz isso.
+                    // Esta parte é para adicionar episódios avulsos.
+                    try {
+                        await this.baserowManager.api.createRecord(episodesTableId, this.formatItemForBaserow(item, 'episode'));
                         successCount++;
-                        
-                        checkbox.checked = false;
-                        checkbox.disabled = true;
-                        checkbox.parentElement.parentElement.parentElement.style.opacity = '0.6';
-                    }
-                } catch (error) {
-                    console.error('[M3U] Erro ao adicionar item:', error);
-                    errorCount++;
+                    } catch (error) { errorCount++; }
+                } else {
+                    // Adicionar filme novo
+                    try {
+                        await this.baserowManager.api.createRecord(moviesTableId, this.formatItemForBaserow(item, 'movie'));
+                        successCount++;
+                    } catch (error) { errorCount++; }
+                }
+                
+                processedCount++;
+                const percentage = Math.round((processedCount / this.selectedItems.size) * 100);
+                ui.updateProgress(percentage, `Enviando ${processedCount} de ${this.selectedItems.size}...`);
+                
+                const checkbox = document.getElementById(`item-${item.id}`);
+                if (checkbox) {
+                    checkbox.checked = false;
+                    checkbox.disabled = true;
                 }
             }
 
-            const message = successCount > 0 ?
-                `🎉 ${successCount} itens adicionados com sucesso!` + (errorCount > 0 ? ` (❌ ${errorCount} falharam)` : '') :
-                `❌ Falha ao adicionar itens selecionados.`;
+            const message = `🎉 ${successCount} itens adicionados! ` +
+                            `${skippedCount > 0 ? `(ℹ️ ${skippedCount} já existiam) ` : ''}` +
+                            `${errorCount > 0 ? `(❌ ${errorCount} falharam)` : ''}`;
             
-            this.showAlert(message, successCount > 0 ? 'success' : 'danger');
+            this.showAlert(message, successCount > 0 ? 'success' : 'info');
 
-            document.getElementById('selectAllItems').checked = false;
+            this.selectedItems.clear();
+            const selectAllCheckbox = document.getElementById('selectAllItems');
+            if (selectAllCheckbox) {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = false;
+            }
             
         } catch (error) {
-            console.error('[M3U] Erro na adição de itens selecionados:', error);
-            this.showAlert('❌ Erro na adição de itens selecionados: ' + this.getErrorMessage(error), 'danger');
+            this.showAlert(`❌ Erro na adição de itens selecionados: ${this.getErrorMessage(error)}`, 'danger');
         } finally {
-            this.setLoading(false);
+            ui.hideProgress();
         }
     }
 
@@ -1480,22 +1682,71 @@ class M3UManager {
 
     toggleSelectAll() {
         const selectAllCheckbox = document.getElementById('selectAllItems');
+        const isChecked = selectAllCheckbox.checked;
+        this.selectedItems.clear(); // Limpar seleção anterior
+
+        if (isChecked) {
+            const activeTabId = document.querySelector('.tab-pane.active')?.id;
+            let itemsToSelect = [];
+
+            if (activeTabId === 'movies') {
+                itemsToSelect = this.processedContent.movies;
+            } else if (activeTabId === 'series') {
+                itemsToSelect = Object.values(this.processedContent.series).flatMap(s => s.episodes);
+            } else if (activeTabId === 'channels') {
+                itemsToSelect = this.processedContent.channels;
+            }
+            
+            console.log(`[M3U] Selecionando todos os ${itemsToSelect.length} itens da aba ${activeTabId}.`);
+            itemsToSelect.forEach(item => this.selectedItems.add(item.id));
+        }
+
+        // Atualizar a UI para os itens visíveis
         const itemCheckboxes = document.querySelectorAll('.item-checkbox:not(:disabled)');
-        
         itemCheckboxes.forEach(checkbox => {
-            checkbox.checked = selectAllCheckbox.checked;
+            checkbox.checked = isChecked;
         });
+
+        this.showAlert(`${this.selectedItems.size} itens selecionados.`, 'info', 2000);
     }
 
     handleItemSelection(checkbox) {
-        const selectAllCheckbox = document.getElementById('selectAllItems');
-        const itemCheckboxes = document.querySelectorAll('.item-checkbox:not(:disabled)');
-        const checkedBoxes = document.querySelectorAll('.item-checkbox:checked');
-        
-        if (selectAllCheckbox) {
-            selectAllCheckbox.checked = checkedBoxes.length === itemCheckboxes.length;
-            selectAllCheckbox.indeterminate = checkedBoxes.length > 0 && checkedBoxes.length < itemCheckboxes.length;
+        const itemId = checkbox.value;
+        if (checkbox.checked) {
+            this.selectedItems.add(itemId);
+        } else {
+            this.selectedItems.delete(itemId);
         }
+
+        // Atualizar o estado do checkbox "Selecionar Todos"
+        const selectAllCheckbox = document.getElementById('selectAllItems');
+        if (selectAllCheckbox) {
+            const activeTabId = document.querySelector('.tab-pane.active')?.id;
+            let totalItems = 0;
+            if (activeTabId === 'movies') {
+                totalItems = this.processedContent.movies.length;
+            } else if (activeTabId === 'series') {
+                totalItems = Object.values(this.processedContent.series).flatMap(s => s.episodes).length;
+            } else if (activeTabId === 'channels') {
+                totalItems = this.processedContent.channels.length;
+            }
+            
+            if (this.selectedItems.size === 0) {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = false;
+            } else if (this.selectedItems.size === totalItems) {
+                selectAllCheckbox.checked = true;
+                selectAllCheckbox.indeterminate = false;
+            } else {
+                selectAllCheckbox.indeterminate = true;
+            }
+        }
+    }
+
+    getEpisodeIdentifier(seriesName, season, episode) {
+        const formattedSeason = String(season).padStart(2, '0');
+        const formattedEpisode = String(episode).padStart(3, '0');
+        return `${seriesName.toLowerCase().trim()}|s${formattedSeason}e${formattedEpisode}`;
     }
 
     generateId() {

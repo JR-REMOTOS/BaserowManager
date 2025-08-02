@@ -397,6 +397,91 @@ class BaserowAPI {
         return { deleted, total: allIds.length };
     }
 
+    // Busca todos os valores de um campo específico em uma tabela (para verificação de duplicados)
+    async fetchAllRecordNames(tableId, nameField) {
+        const names = new Set();
+        if (!tableId || !nameField) {
+            return names;
+        }
+
+        let page = 1;
+        const size = 200; // Máximo permitido pela API
+
+        try {
+            while (true) {
+                const params = {
+                    page,
+                    size,
+                    user_field_names: 'true',
+                    include: nameField // Apenas busca o campo que nos interessa
+                };
+                const data = await this.fetchRecords(tableId, params);
+                
+                if (!data.results || data.results.length === 0) {
+                    break; // Sai do loop quando não houver mais resultados
+                }
+
+                data.results.forEach(record => {
+                    if (record[nameField]) {
+                        names.add(record[nameField].toString().trim());
+                    }
+                });
+
+                if (data.results.length < size) {
+                    break; // Otimização: se retornou menos que o tamanho da página, é a última página
+                }
+
+                page++;
+            }
+        } catch (error) {
+            console.error(`[API] Erro ao buscar nomes da tabela ${tableId}:`, error);
+            // Retorna os nomes que conseguiu buscar até o momento do erro
+        }
+        
+        return names;
+    }
+
+    async fetchExistingEpisodeIds(tableId, seriesNameField, seasonField, episodeField) {
+        const ids = new Set();
+        if (!tableId || !seriesNameField || !seasonField || !episodeField) {
+            return ids;
+        }
+
+        let page = 1;
+        const size = 200;
+
+        try {
+            while (true) {
+                const params = {
+                    page,
+                    size,
+                    user_field_names: 'true',
+                    include: `${seriesNameField},${seasonField},${episodeField}`
+                };
+                const data = await this.fetchRecords(tableId, params);
+                
+                if (!data.results || data.results.length === 0) break;
+
+                data.results.forEach(record => {
+                    const seriesName = record[seriesNameField];
+                    const season = record[seasonField];
+                    const episode = record[episodeField];
+                    if (seriesName && season && episode) {
+                        const identifier = `${seriesName.toLowerCase().trim()}|s${String(season).padStart(2, '0')}e${String(episode).padStart(3, '0')}`;
+                        ids.add(identifier);
+                    }
+                });
+
+                if (data.results.length < size) break;
+                page++;
+            }
+        } catch (error) {
+            console.error(`[API] Erro ao buscar IDs de episódios da tabela ${tableId}:`, error);
+        }
+        
+        return ids;
+    }
+
     // Upload de arquivo
     async uploadFile(file) {
         const formData = new FormData();

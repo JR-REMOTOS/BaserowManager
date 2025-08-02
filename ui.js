@@ -232,6 +232,14 @@ class UIManager {
         });
 
         container.innerHTML = html;
+
+        // Adicionar event listener para salvar automaticamente ao alterar o mapeamento
+        container.querySelectorAll('select').forEach(select => {
+            select.addEventListener('change', () => {
+                console.log(`[UI] Mapeamento '${type}' alterado. Salvando configuração...`);
+                this.saveConfig();
+            });
+        });
     }
 
     async testConnection() {
@@ -639,7 +647,7 @@ class UIManager {
         if (tableHeader) tableHeader.style.display = 'none';
     }
 
-    showAlert(message, type = 'info') {
+    showAlert(message, type = 'info', duration = 5000) {
         const alertDiv = document.createElement('div');
         alertDiv.className = `alert alert-${type} alert-custom alert-dismissible fade show`;
         alertDiv.innerHTML = `
@@ -652,7 +660,7 @@ class UIManager {
             mainContent.insertBefore(alertDiv, mainContent.firstChild);
         }
         
-        setTimeout(() => alertDiv.remove(), 5000);
+        setTimeout(() => alertDiv.remove(), duration);
     }
 
     showProgress(title, message) {
@@ -702,10 +710,11 @@ class UIManager {
 
     // Salvar configuração
     async saveConfig() {
-        if (window.app && typeof window.app.saveUserConfig === 'function') {
-            await window.app.saveUserConfig();
+        if (window.app && typeof window.app.saveConfigToLocalStorage === 'function') {
+            // A chamada agora é para a função que salva localmente.
+            await window.app.saveConfigToLocalStorage();
         } else {
-            console.error("saveUserConfig function not found on global app object.");
+            console.error("saveConfigToLocalStorage function not found on global app object.");
         }
 
         if (window.app && window.app.m3uManager && typeof window.app.m3uManager.checkAndEnableButtons === 'function') {
