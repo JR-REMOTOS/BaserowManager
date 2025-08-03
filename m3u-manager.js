@@ -1375,6 +1375,39 @@ class M3UManager {
         }
     }
 
+    splitLargeSeries(allSeries) {
+        const finalSeriesList = [];
+        for (const series of allSeries) {
+            if (series.episodes.length <= 100) {
+                finalSeriesList.push({ ...series, isSplitPart: false });
+                continue;
+            }
+
+            const numParts = Math.ceil(series.episodes.length / 100);
+            for (let i = 0; i < numParts; i++) {
+                const partSeason = i + 1;
+                const partEpisodes = series.episodes.slice(i * 100, (i + 1) * 100);
+                
+                let episodeCounter = 1;
+                const updatedEpisodes = partEpisodes.map(ep => ({
+                    ...ep,
+                    seriesName: series.name, // Always use the original name
+                    season: partSeason,      // Set season to the part number
+                    episode: episodeCounter++  // Reset episode number for the new season
+                }));
+
+                const newSeriesPart = {
+                    ...series,
+                    name: series.name, // Keep original name
+                    episodes: updatedEpisodes,
+                    isSplitPart: true // Flag to identify this as a part of a split series
+                };
+                finalSeriesList.push(newSeriesPart);
+            }
+        }
+        return finalSeriesList;
+    }
+
     async addAllFromTab(tabName) {
         const apiConfig = this.baserowManager.api.config;
         const moviesTableId = apiConfig.conteudosTableId;
@@ -1419,8 +1452,26 @@ class M3UManager {
                 ui.hideProgress();
                 return;
             }
+
+            // Prioritize series with more than 100 episodes
+            allSeries.sort((a, b) => {
+                const aIsLarge = a.episodes.length > 100;
+                const bIsLarge = b.episodes.length > 100;
+                if (aIsLarge && !bIsLarge) return -1;
+                if (!aIsLarge && bIsLarge) return 1;
+                return 0;
+            });
             
-            const confirm = window.confirm(`Deseja verificar ${allSeries.length} séries e adicionar as novas junto com seus episódios?`);
+            const finalSeriesList = this.splitLargeSeries(allSeries);
+            const originalSeriesCount = allSeries.length;
+            const finalSeriesCount = finalSeriesList.length;
+
+            let confirmMessage = `Deseja verificar ${originalSeriesCount} séries e adicionar as novas junto com seus episódios?`;
+            if (finalSeriesCount > originalSeriesCount) {
+                confirmMessage += `\n\nℹ️ Séries com mais de 100 episódios serão divididas em partes, resultando em um total de ${finalSeriesCount} partes de séries a serem processadas.`
+            }
+            
+            const confirm = window.confirm(confirmMessage);
             if (!confirm) {
                 ui.hideProgress();
                 return;
@@ -1439,15 +1490,16 @@ class M3UManager {
                 let episodesSkipped = 0;
                 let errors = 0;
 
-                for (const series of allSeries) {
+                for (const series of finalSeriesList) {
                     seriesProcessed++;
                     ui.updateProgress(
-                        Math.round((seriesProcessed / allSeries.length) * 100),
-                        `Processando série ${seriesProcessed} de ${allSeries.length}: ${series.name}`
+                        Math.round((seriesProcessed / finalSeriesList.length) * 100),
+                        `Processando parte ${seriesProcessed} de ${finalSeriesList.length}: ${series.name}`
                     );
 
-                    if (!existingNames.has(series.name)) {
+                    if (!existingNames.has(series.name) || series.isSplitPart) {
                         // Adiciona nova série e todos os seus episódios
+                        // For split parts, this will create new "conteudo" entries even with the same name
                         const seriesHeaderData = this.fieldMapper.mapSeriesHeader(series, apiConfig.mapping_conteudos);
                         for (const seasonData of seriesHeaderData) {
                             await this.baserowManager.api.createRecord(moviesTableId, seasonData).catch(e => errors++);
